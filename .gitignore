@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated synthetic datasets (recreate with: python generate_tickets.py --dirty)
+data/
