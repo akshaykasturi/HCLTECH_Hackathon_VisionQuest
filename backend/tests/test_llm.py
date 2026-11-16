@@ -55,7 +55,7 @@ def test_gemini_answers_first(keys) -> None:
     data, provider, errors = generate_json("Explain.", "Case 1", Answer, http=http)
     assert data == Answer(summary="Likely the cache.", score=0.7) and provider == "gemini" and errors == []
     call = http.calls[0]
-    assert call["headers"] == {"x-goog-api-key": FAKE_GEMINI} and call["timeout"] == 15.0
+    assert call["headers"] == {**llm.COMMON_HEADERS, "x-goog-api-key": FAKE_GEMINI} and call["timeout"] == 15.0
     system = call["body"]["systemInstruction"]["parts"][0]["text"]
     assert "Explain." in system and '"summary"' in system  # the schema is in the prompt
 
@@ -65,7 +65,7 @@ def test_falls_back_to_groq_when_gemini_fails(keys) -> None:
     data, provider, errors = generate_json("s", "u", Answer, http=http)
     assert provider == "groq" and data.score == 0.7
     assert errors == ["gemini: HTTP 503"]
-    assert http.calls[1]["headers"] == {"Authorization": f"Bearer {FAKE_GROQ}"}
+    assert http.calls[1]["headers"] == {**llm.COMMON_HEADERS, "Authorization": f"Bearer {FAKE_GROQ}"}
     assert http.calls[1]["body"]["response_format"] == {"type": "json_object"}
 
 
@@ -142,3 +142,56 @@ def test_urllib_layer_reports_network_errors_without_details(monkeypatch) -> Non
     with pytest.raises(LLMError) as exc:
         llm.urllib_post("https://127.0.0.1:9/x", {}, {}, 1.0)
     assert str(exc.value) == "network error (ConnectionRefusedError)"
+
+
+def test_every_request_sends_our_user_agent(keys) -> None:
+    # Cloudflare in front of Groq answers 403 to urllib's default "Python-urllib" User-Agent.
+    http = FakeHttp(gemini=[LLMError("HTTP 503")], groq=[groq_reply(GOOD)])
+    generate_json("s", "u", Answer, http=http)
+    assert [c["provider"] for c in http.calls] == ["gemini", "groq"]
+    for call in http.calls:
+        assert call["headers"]["User-Agent"] == "hackathon-llm-gateway/1.0"
+        assert call["headers"]["Accept"] == "application/json"
+
+
+def test_urllib_layer_sends_user_agent_not_python_urllib(monkeypatch) -> None:
+    seen = {}
+
+    class Reply:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    def capture(request, timeout):
+        seen["ua"] = request.get_header("User-agent")
+        seen["accept"] = request.get_header("Accept")
+        return Reply()
+
+    monkeypatch.setattr(llm.urllib.request, "urlopen", capture)
+    assert llm.urllib_post("https://127.0.0.1:9/x", {}, {}, 1.0) == {"ok": True}
+    assert seen == {"ua": "hackathon-llm-gateway/1.0", "accept": "application/json"}
+
+
+def test_http_error_shows_status_and_masked_body_but_never_the_key(monkeypatch) -> None:
+    import io
+    import urllib.error
+
+    email = "jane" + "@" + "example.com"
+    body = (f'{{"error": {{"message": "Forbidden for {email}, key {FAKE_GROQ} rejected", '
+            f'"padding": "{"x" * 500}"}}}}').encode()
+
+    def forbid(request, timeout):
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO(body))
+
+    monkeypatch.setattr(llm.urllib.request, "urlopen", forbid)
+    with pytest.raises(LLMError) as exc:
+        llm.urllib_post("https://127.0.0.1:9/x", {"Authorization": f"Bearer {FAKE_GROQ}"}, {}, 1.0)
+    message = str(exc.value)
+    assert message.startswith("HTTP 403: ") and "Forbidden for" in message
+    assert FAKE_GROQ not in message and email not in message
+    assert len(message) <= len("HTTP 403: ") + llm.ERROR_BODY_CHARS
