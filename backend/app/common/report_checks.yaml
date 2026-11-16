@@ -1,0 +1,50 @@
+# Word lists for app/common/report_checks.py. Change words here, not in code.
+
+citations:
+  # A quote shorter than this proves nothing ("ms", "504") and is blocked.
+  min_quote_chars: 8
+
+certainty:
+  # Blocked: the report never claims certainty the evidence does not prove.
+  phrases:
+    - confirmed
+    - definitely
+    - the root cause is
+    - proven
+    - guaranteed
+    - certainly
+    - "100%"
+  # A phrase is allowed when one of these words is just before it ("not confirmed",
+  # "cannot be confirmed") or just after it ("the root cause is not known").
+  negations: [not, cannot, "can't", never, "isn't", "wasn't", unable]
+  words_before: 3
+  words_after: 1
+
+safe_steps:
+  # Changing or destructive actions. Blocked in suggested steps: a human decides.
+  verbs:
+    - rotate
+    - revoke
+    - regenerate
+    - restart
+    - redeploy
+    - roll back
+    - rollback
+    - delete
+    - drop
+    - flush
+    - purge
+    - truncate
+    - wipe
+    - scale up
+    - scale down
+    - edit config
+    - edit the config
+    - disable
+    - kill
+    - shutdown
+    - shut down
+
+numbers:
+  # Numbers always allowed (counting words like "1 item" are fine).
+  always_allowed: [0, 1]

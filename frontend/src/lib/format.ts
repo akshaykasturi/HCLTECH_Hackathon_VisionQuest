@@ -1,0 +1,50 @@
+// Display-only formatting. Never changes the underlying values.
+
+/** > 0.99 shows "> 0.99", < 0.01 shows "< 0.01", otherwise two decimals. */
+export function formatConfidence(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value > 0.99) return "> 0.99";
+  if (value < 0.01) return "< 0.01";
+  return value.toFixed(2);
+}
+
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+  year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+  timeZone: "UTC", hour12: false,
+});
+
+/** ISO timestamp -> "16 Nov 2026, 10:00:00 UTC". Unparseable input is shown as given. */
+export function formatTimestamp(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return `${dateFormat.format(date)} UTC`;
+}
+
+export function formatClock(date: Date): string {
+  return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
+/** "token_expired" -> "Token expired". */
+export function humanize(identifier: string | null | undefined): string {
+  if (!identifier) return "—";
+  const text = identifier.replace(/[_-]+/g, " ").trim();
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function shortHash(hash: string | null | undefined, size = 12): string {
+  if (!hash) return "—";
+  return hash.length > size ? `${hash.slice(0, size)}…` : hash;
+}
+
+/** Render any value as plain text (never HTML). */
+export function valueToText(value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
