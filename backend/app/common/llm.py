@@ -44,6 +44,10 @@ HttpPost = Callable[[str, dict[str, str], dict[str, Any], float], dict[str, Any]
 DEFAULT_TIMEOUT_S = 15.0
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+# Sent on every request. Cloudflare (in front of api.groq.com) answers 403 to urllib's default
+# "Python-urllib/3.x" User-Agent, so we name our client explicitly.
+COMMON_HEADERS = {"User-Agent": "hackathon-llm-gateway/1.0", "Accept": "application/json"}
+ERROR_BODY_CHARS = 200
 
 
 class LLMError(Exception):
@@ -62,12 +66,13 @@ def urllib_post(url: str, headers: dict[str, str], body: dict[str, Any], timeout
     """POST JSON with urllib and return the parsed JSON reply."""
     data = json.dumps(body).encode("utf-8")
     request = urllib.request.Request(url, data=data, method="POST",
-                                     headers={"Content-Type": "application/json", **headers})
+                                     headers={"Content-Type": "application/json", **COMMON_HEADERS, **headers})
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 (fixed https URLs)
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        raise LLMError(f"HTTP {exc.code}") from None
+        detail = _error_body(exc, secrets=list(headers.values()))
+        raise LLMError(f"HTTP {exc.code}: {detail}" if detail else f"HTTP {exc.code}") from None
     except (TimeoutError, socket.timeout):
         raise LLMError(f"timed out after {timeout:g} s") from None
     except urllib.error.URLError as exc:
@@ -77,6 +82,25 @@ def urllib_post(url: str, headers: dict[str, str], body: dict[str, Any], timeout
         raise LLMError(f"network error ({type(reason).__name__})") from None
     except (ValueError, UnicodeDecodeError):
         raise LLMError("reply is not JSON") from None
+
+
+def _error_body(exc: urllib.error.HTTPError, secrets: list[str]) -> str:
+    """The start of an HTTP error reply, masked: tells us the real reason (bad key, blocked, quota...).
+
+    Header values (which hold the key) are removed first, then redact.mask runs, then we cut to
+    ERROR_BODY_CHARS. Masking before cutting means a half-cut key can never slip past the patterns.
+    """
+    try:
+        text = exc.read(4096).decode("utf-8", errors="replace")
+    except Exception:  # noqa: BLE001 (the body is only a hint; never let it hide the status code)
+        return ""
+    for secret in secrets:
+        if secret:
+            text = text.replace(secret, "<KEY>")
+            if secret.startswith("Bearer "):
+                text = text.replace(secret[len("Bearer "):], "<KEY>")
+    text = " ".join(mask(text).split())
+    return text[:ERROR_BODY_CHARS]
 
 
 # ---------- providers ----------
@@ -99,7 +123,7 @@ def _call_gemini(key: str, system: str, user: str, http: HttpPost, timeout: floa
         "contents": [{"role": "user", "parts": [{"text": user}]}],
         "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
     }
-    reply = http(GEMINI_URL.format(model=model), {"x-goog-api-key": key}, body, timeout)
+    reply = http(GEMINI_URL.format(model=model), {**COMMON_HEADERS, "x-goog-api-key": key}, body, timeout)
     try:
         return "".join(p.get("text", "") for p in reply["candidates"][0]["content"]["parts"])
     except (KeyError, IndexError, TypeError):
@@ -114,7 +138,7 @@ def _call_groq(key: str, system: str, user: str, http: HttpPost, timeout: float)
         "response_format": {"type": "json_object"},
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }
-    reply = http(GROQ_URL, {"Authorization": f"Bearer {key}"}, body, timeout)
+    reply = http(GROQ_URL, {**COMMON_HEADERS, "Authorization": f"Bearer {key}"}, body, timeout)
     try:
         return reply["choices"][0]["message"]["content"] or ""
     except (KeyError, IndexError, TypeError):
