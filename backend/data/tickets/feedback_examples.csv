@@ -1,0 +1,181 @@
+feedback_id,result_id,reviewer_id,target,target_id,verdict,note_masked,created_at,synthetic
+FB-00001,AR-00001,analyst-01,result,AR-00001,useful,Escalated to resolver group.,2026-11-16T18:00:00+00:00,True
+FB-00002,AR-00002,analyst-02,result,AR-00002,incorrect,Needs more diagnostic detail.,2026-11-16T18:00:00+00:00,True
+FB-00003,AR-00003,analyst-03,result,AR-00003,useful,Evidence matched observed issue.,2026-11-16T18:00:00+00:00,True
+FB-00004,AR-00004,analyst-04,result,AR-00004,useful,Needs more diagnostic detail.,2026-11-16T18:00:00+00:00,True
+FB-00005,AR-00005,analyst-05,result,AR-00005,useful,Fix steps were not applicable.,2026-11-15T18:00:00+00:00,True
+FB-00006,AR-00006,analyst-06,result,AR-00006,unresolved,Needs more diagnostic detail.,2026-11-15T18:00:00+00:00,True
+FB-00007,AR-00007,analyst-07,result,AR-00007,useful,Fix steps were not applicable.,2026-11-15T18:00:00+00:00,True
+FB-00008,AR-00008,analyst-08,result,AR-00008,useful,Evidence matched observed issue.,2026-11-15T18:00:00+00:00,True
+FB-00009,AR-00009,analyst-09,result,AR-00009,useful,Evidence matched observed issue.,2026-11-14T18:00:00+00:00,True
+FB-00010,AR-00010,analyst-10,result,AR-00010,useful,Fix steps were not applicable.,2026-11-14T18:00:00+00:00,True
+FB-00011,AR-00011,analyst-11,result,AR-00011,incorrect,Fix steps were not applicable.,2026-11-14T18:00:00+00:00,True
+FB-00012,AR-00012,analyst-12,result,AR-00012,useful,Escalated to resolver group.,2026-11-14T18:00:00+00:00,True
+FB-00013,AR-00013,analyst-01,result,AR-00013,useful,Evidence matched observed issue.,2026-11-13T18:00:00+00:00,True
+FB-00014,AR-00014,analyst-02,result,AR-00014,unresolved,Fix steps were not applicable.,2026-11-13T18:00:00+00:00,True
+FB-00015,AR-00015,analyst-03,result,AR-00015,incorrect,Needs more diagnostic detail.,2026-11-13T18:00:00+00:00,True
+FB-00016,AR-00016,analyst-04,result,AR-00016,unresolved,Needs more diagnostic detail.,2026-11-13T18:00:00+00:00,True
+FB-00017,AR-00017,analyst-05,result,AR-00017,incorrect,Escalated to resolver group.,2026-11-12T18:00:00+00:00,True
+FB-00018,AR-00018,analyst-06,result,AR-00018,useful,Needs more diagnostic detail.,2026-11-12T18:00:00+00:00,True
+FB-00019,AR-00019,analyst-07,result,AR-00019,incorrect,Needs more diagnostic detail.,2026-11-12T18:00:00+00:00,True
+FB-00020,AR-00020,analyst-08,result,AR-00020,unresolved,Evidence matched observed issue.,2026-11-12T18:00:00+00:00,True
+FB-00021,AR-00021,analyst-09,result,AR-00021,useful,Escalated to resolver group.,2026-11-11T18:00:00+00:00,True
+FB-00022,AR-00022,analyst-10,result,AR-00022,useful,Needs more diagnostic detail.,2026-11-11T18:00:00+00:00,True
+FB-00023,AR-00023,analyst-11,result,AR-00023,useful,Evidence matched observed issue.,2026-11-11T18:00:00+00:00,True
+FB-00024,AR-00024,analyst-12,result,AR-00024,useful,Fix steps were not applicable.,2026-11-11T18:00:00+00:00,True
+FB-00025,AR-00025,analyst-01,result,AR-00025,incorrect,Fix steps were not applicable.,2026-11-10T18:00:00+00:00,True
+FB-00026,AR-00026,analyst-02,result,AR-00026,useful,Evidence matched observed issue.,2026-11-10T18:00:00+00:00,True
+FB-00027,AR-00027,analyst-03,result,AR-00027,incorrect,Needs more diagnostic detail.,2026-11-10T18:00:00+00:00,True
+FB-00028,AR-00028,analyst-04,result,AR-00028,useful,Evidence matched observed issue.,2026-11-10T18:00:00+00:00,True
+FB-00029,AR-00029,analyst-05,result,AR-00029,useful,Evidence matched observed issue.,2026-11-09T18:00:00+00:00,True
+FB-00030,AR-00030,analyst-06,result,AR-00030,useful,Escalated to resolver group.,2026-11-09T18:00:00+00:00,True
+FB-00031,AR-00031,analyst-07,result,AR-00031,useful,Evidence matched observed issue.,2026-11-09T18:00:00+00:00,True
+FB-00032,AR-00032,analyst-08,result,AR-00032,useful,Fix steps were not applicable.,2026-11-09T18:00:00+00:00,True
+FB-00033,AR-00033,analyst-09,result,AR-00033,useful,Escalated to resolver group.,2026-11-08T18:00:00+00:00,True
+FB-00034,AR-00034,analyst-10,result,AR-00034,useful,Fix steps were not applicable.,2026-11-08T18:00:00+00:00,True
+FB-00035,AR-00035,analyst-11,result,AR-00035,incorrect,Evidence matched observed issue.,2026-11-08T18:00:00+00:00,True
+FB-00036,AR-00036,analyst-12,result,AR-00036,useful,Needs more diagnostic detail.,2026-11-08T18:00:00+00:00,True
+FB-00037,AR-00037,analyst-01,result,AR-00037,useful,Evidence matched observed issue.,2026-11-07T18:00:00+00:00,True
+FB-00038,AR-00038,analyst-02,result,AR-00038,unresolved,Needs more diagnostic detail.,2026-11-07T18:00:00+00:00,True
+FB-00039,AR-00039,analyst-03,result,AR-00039,useful,Needs more diagnostic detail.,2026-11-07T18:00:00+00:00,True
+FB-00040,AR-00040,analyst-04,result,AR-00040,incorrect,Evidence matched observed issue.,2026-11-07T18:00:00+00:00,True
+FB-00041,AR-00041,analyst-05,result,AR-00041,useful,Evidence matched observed issue.,2026-11-06T18:00:00+00:00,True
+FB-00042,AR-00042,analyst-06,result,AR-00042,useful,Escalated to resolver group.,2026-11-06T18:00:00+00:00,True
+FB-00043,AR-00043,analyst-07,result,AR-00043,useful,Evidence matched observed issue.,2026-11-06T18:00:00+00:00,True
+FB-00044,AR-00044,analyst-08,result,AR-00044,useful,Fix steps were not applicable.,2026-11-06T18:00:00+00:00,True
+FB-00045,AR-00045,analyst-09,result,AR-00045,useful,Escalated to resolver group.,2026-11-05T18:00:00+00:00,True
+FB-00046,AR-00046,analyst-10,result,AR-00046,unresolved,Needs more diagnostic detail.,2026-11-05T18:00:00+00:00,True
+FB-00047,AR-00047,analyst-11,result,AR-00047,useful,Evidence matched observed issue.,2026-11-05T18:00:00+00:00,True
+FB-00048,AR-00048,analyst-12,result,AR-00048,useful,Fix steps were not applicable.,2026-11-05T18:00:00+00:00,True
+FB-00049,AR-00049,analyst-01,result,AR-00049,useful,Fix steps were not applicable.,2026-11-04T18:00:00+00:00,True
+FB-00050,AR-00050,analyst-02,result,AR-00050,unresolved,Escalated to resolver group.,2026-11-04T18:00:00+00:00,True
+FB-00051,AR-00051,analyst-03,result,AR-00051,useful,Fix steps were not applicable.,2026-11-04T18:00:00+00:00,True
+FB-00052,AR-00052,analyst-04,result,AR-00052,useful,Fix steps were not applicable.,2026-11-04T18:00:00+00:00,True
+FB-00053,AR-00053,analyst-05,result,AR-00053,useful,Evidence matched observed issue.,2026-11-03T18:00:00+00:00,True
+FB-00054,AR-00054,analyst-06,result,AR-00054,useful,Needs more diagnostic detail.,2026-11-03T18:00:00+00:00,True
+FB-00055,AR-00055,analyst-07,result,AR-00055,unresolved,Evidence matched observed issue.,2026-11-03T18:00:00+00:00,True
+FB-00056,AR-00056,analyst-08,result,AR-00056,useful,Fix steps were not applicable.,2026-11-03T18:00:00+00:00,True
+FB-00057,AR-00057,analyst-09,result,AR-00057,useful,Fix steps were not applicable.,2026-11-02T18:00:00+00:00,True
+FB-00058,AR-00058,analyst-10,result,AR-00058,useful,Fix steps were not applicable.,2026-11-02T18:00:00+00:00,True
+FB-00059,AR-00059,analyst-11,result,AR-00059,useful,Evidence matched observed issue.,2026-11-02T18:00:00+00:00,True
+FB-00060,AR-00060,analyst-12,result,AR-00060,useful,Needs more diagnostic detail.,2026-11-02T18:00:00+00:00,True
+FB-00061,AR-00061,analyst-01,result,AR-00061,useful,Needs more diagnostic detail.,2026-11-01T18:00:00+00:00,True
+FB-00062,AR-00062,analyst-02,result,AR-00062,useful,Evidence matched observed issue.,2026-11-01T18:00:00+00:00,True
+FB-00063,AR-00063,analyst-03,result,AR-00063,incorrect,Escalated to resolver group.,2026-11-01T18:00:00+00:00,True
+FB-00064,AR-00064,analyst-04,result,AR-00064,useful,Fix steps were not applicable.,2026-11-01T18:00:00+00:00,True
+FB-00065,AR-00065,analyst-05,result,AR-00065,incorrect,Evidence matched observed issue.,2026-10-31T18:00:00+00:00,True
+FB-00066,AR-00066,analyst-06,result,AR-00066,useful,Fix steps were not applicable.,2026-10-31T18:00:00+00:00,True
+FB-00067,AR-00067,analyst-07,result,AR-00067,useful,Escalated to resolver group.,2026-10-31T18:00:00+00:00,True
+FB-00068,AR-00068,analyst-08,result,AR-00068,unresolved,Fix steps were not applicable.,2026-10-31T18:00:00+00:00,True
+FB-00069,AR-00069,analyst-09,result,AR-00069,useful,Fix steps were not applicable.,2026-10-30T18:00:00+00:00,True
+FB-00070,AR-00070,analyst-10,result,AR-00070,useful,Needs more diagnostic detail.,2026-10-30T18:00:00+00:00,True
+FB-00071,AR-00071,analyst-11,result,AR-00071,useful,Fix steps were not applicable.,2026-10-30T18:00:00+00:00,True
+FB-00072,AR-00072,analyst-12,result,AR-00072,incorrect,Needs more diagnostic detail.,2026-10-30T18:00:00+00:00,True
+FB-00073,AR-00073,analyst-01,result,AR-00073,unresolved,Needs more diagnostic detail.,2026-10-29T18:00:00+00:00,True
+FB-00074,AR-00074,analyst-02,result,AR-00074,useful,Fix steps were not applicable.,2026-10-29T18:00:00+00:00,True
+FB-00075,AR-00075,analyst-03,result,AR-00075,useful,Fix steps were not applicable.,2026-10-29T18:00:00+00:00,True
+FB-00076,AR-00076,analyst-04,result,AR-00076,unresolved,Needs more diagnostic detail.,2026-10-29T18:00:00+00:00,True
+FB-00077,AR-00077,analyst-05,result,AR-00077,useful,Fix steps were not applicable.,2026-10-28T18:00:00+00:00,True
+FB-00078,AR-00078,analyst-06,result,AR-00078,useful,Needs more diagnostic detail.,2026-10-28T18:00:00+00:00,True
+FB-00079,AR-00079,analyst-07,result,AR-00079,useful,Fix steps were not applicable.,2026-10-28T18:00:00+00:00,True
+FB-00080,AR-00080,analyst-08,result,AR-00080,useful,Needs more diagnostic detail.,2026-10-28T18:00:00+00:00,True
+FB-00081,AR-00081,analyst-09,result,AR-00081,useful,Escalated to resolver group.,2026-10-27T18:00:00+00:00,True
+FB-00082,AR-00082,analyst-10,result,AR-00082,useful,Evidence matched observed issue.,2026-10-27T18:00:00+00:00,True
+FB-00083,AR-00083,analyst-11,result,AR-00083,useful,Needs more diagnostic detail.,2026-10-27T18:00:00+00:00,True
+FB-00084,AR-00084,analyst-12,result,AR-00084,unresolved,Evidence matched observed issue.,2026-10-27T18:00:00+00:00,True
+FB-00085,AR-00085,analyst-01,result,AR-00085,useful,Evidence matched observed issue.,2026-10-26T18:00:00+00:00,True
+FB-00086,AR-00086,analyst-02,result,AR-00086,useful,Needs more diagnostic detail.,2026-10-26T18:00:00+00:00,True
+FB-00087,AR-00087,analyst-03,result,AR-00087,useful,Needs more diagnostic detail.,2026-10-26T18:00:00+00:00,True
+FB-00088,AR-00088,analyst-04,result,AR-00088,useful,Evidence matched observed issue.,2026-10-26T18:00:00+00:00,True
+FB-00089,AR-00089,analyst-05,result,AR-00089,useful,Escalated to resolver group.,2026-10-25T18:00:00+00:00,True
+FB-00090,AR-00090,analyst-06,result,AR-00090,useful,Evidence matched observed issue.,2026-10-25T18:00:00+00:00,True
+FB-00091,AR-00091,analyst-07,result,AR-00091,incorrect,Evidence matched observed issue.,2026-10-25T18:00:00+00:00,True
+FB-00092,AR-00092,analyst-08,result,AR-00092,useful,Fix steps were not applicable.,2026-10-25T18:00:00+00:00,True
+FB-00093,AR-00093,analyst-09,result,AR-00093,unresolved,Fix steps were not applicable.,2026-10-24T18:00:00+00:00,True
+FB-00094,AR-00094,analyst-10,result,AR-00094,incorrect,Escalated to resolver group.,2026-10-24T18:00:00+00:00,True
+FB-00095,AR-00095,analyst-11,result,AR-00095,incorrect,Evidence matched observed issue.,2026-10-24T18:00:00+00:00,True
+FB-00096,AR-00096,analyst-12,result,AR-00096,useful,Evidence matched observed issue.,2026-10-24T18:00:00+00:00,True
+FB-00097,AR-00097,analyst-01,result,AR-00097,incorrect,Fix steps were not applicable.,2026-10-23T18:00:00+00:00,True
+FB-00098,AR-00098,analyst-02,result,AR-00098,unresolved,Escalated to resolver group.,2026-10-23T18:00:00+00:00,True
+FB-00099,AR-00099,analyst-03,result,AR-00099,useful,Fix steps were not applicable.,2026-10-23T18:00:00+00:00,True
+FB-00100,AR-00100,analyst-04,result,AR-00100,useful,Needs more diagnostic detail.,2026-10-23T18:00:00+00:00,True
+FB-00101,AR-00101,analyst-05,result,AR-00101,incorrect,Escalated to resolver group.,2026-10-22T18:00:00+00:00,True
+FB-00102,AR-00102,analyst-06,result,AR-00102,useful,Evidence matched observed issue.,2026-10-22T18:00:00+00:00,True
+FB-00103,AR-00103,analyst-07,result,AR-00103,useful,Fix steps were not applicable.,2026-10-22T18:00:00+00:00,True
+FB-00104,AR-00104,analyst-08,result,AR-00104,unresolved,Fix steps were not applicable.,2026-10-22T18:00:00+00:00,True
+FB-00105,AR-00105,analyst-09,result,AR-00105,useful,Escalated to resolver group.,2026-10-21T18:00:00+00:00,True
+FB-00106,AR-00106,analyst-10,result,AR-00106,useful,Needs more diagnostic detail.,2026-10-21T18:00:00+00:00,True
+FB-00107,AR-00107,analyst-11,result,AR-00107,incorrect,Escalated to resolver group.,2026-10-21T18:00:00+00:00,True
+FB-00108,AR-00108,analyst-12,result,AR-00108,useful,Needs more diagnostic detail.,2026-10-21T18:00:00+00:00,True
+FB-00109,AR-00109,analyst-01,result,AR-00109,useful,Fix steps were not applicable.,2026-10-20T18:00:00+00:00,True
+FB-00110,AR-00110,analyst-02,result,AR-00110,useful,Escalated to resolver group.,2026-10-20T18:00:00+00:00,True
+FB-00111,AR-00111,analyst-03,result,AR-00111,useful,Escalated to resolver group.,2026-10-20T18:00:00+00:00,True
+FB-00112,AR-00112,analyst-04,result,AR-00112,unresolved,Needs more diagnostic detail.,2026-10-20T18:00:00+00:00,True
+FB-00113,AR-00113,analyst-05,result,AR-00113,useful,Fix steps were not applicable.,2026-10-19T18:00:00+00:00,True
+FB-00114,AR-00114,analyst-06,result,AR-00114,useful,Escalated to resolver group.,2026-10-19T18:00:00+00:00,True
+FB-00115,AR-00115,analyst-07,result,AR-00115,useful,Fix steps were not applicable.,2026-10-19T18:00:00+00:00,True
+FB-00116,AR-00116,analyst-08,result,AR-00116,incorrect,Fix steps were not applicable.,2026-10-19T18:00:00+00:00,True
+FB-00117,AR-00117,analyst-09,result,AR-00117,incorrect,Fix steps were not applicable.,2026-10-18T18:00:00+00:00,True
+FB-00118,AR-00118,analyst-10,result,AR-00118,unresolved,Escalated to resolver group.,2026-10-18T18:00:00+00:00,True
+FB-00119,AR-00119,analyst-11,result,AR-00119,useful,Evidence matched observed issue.,2026-10-18T18:00:00+00:00,True
+FB-00120,AR-00120,analyst-12,result,AR-00120,useful,Fix steps were not applicable.,2026-10-18T18:00:00+00:00,True
+FB-00121,AR-00121,analyst-01,result,AR-00121,useful,Fix steps were not applicable.,2026-10-17T18:00:00+00:00,True
+FB-00122,AR-00122,analyst-02,result,AR-00122,incorrect,Fix steps were not applicable.,2026-10-17T18:00:00+00:00,True
+FB-00123,AR-00123,analyst-03,result,AR-00123,useful,Evidence matched observed issue.,2026-10-17T18:00:00+00:00,True
+FB-00124,AR-00124,analyst-04,result,AR-00124,useful,Fix steps were not applicable.,2026-10-17T18:00:00+00:00,True
+FB-00125,AR-00125,analyst-05,result,AR-00125,useful,Escalated to resolver group.,2026-10-16T18:00:00+00:00,True
+FB-00126,AR-00126,analyst-06,result,AR-00126,useful,Needs more diagnostic detail.,2026-10-16T18:00:00+00:00,True
+FB-00127,AR-00127,analyst-07,result,AR-00127,unresolved,Fix steps were not applicable.,2026-10-16T18:00:00+00:00,True
+FB-00128,AR-00128,analyst-08,result,AR-00128,useful,Needs more diagnostic detail.,2026-10-16T18:00:00+00:00,True
+FB-00129,AR-00129,analyst-09,result,AR-00129,useful,Fix steps were not applicable.,2026-10-15T18:00:00+00:00,True
+FB-00130,AR-00130,analyst-10,result,AR-00130,useful,Escalated to resolver group.,2026-10-15T18:00:00+00:00,True
+FB-00131,AR-00131,analyst-11,result,AR-00131,useful,Evidence matched observed issue.,2026-10-15T18:00:00+00:00,True
+FB-00132,AR-00132,analyst-12,result,AR-00132,incorrect,Escalated to resolver group.,2026-10-15T18:00:00+00:00,True
+FB-00133,AR-00133,analyst-01,result,AR-00133,unresolved,Evidence matched observed issue.,2026-10-14T18:00:00+00:00,True
+FB-00134,AR-00134,analyst-02,result,AR-00134,useful,Needs more diagnostic detail.,2026-10-14T18:00:00+00:00,True
+FB-00135,AR-00135,analyst-03,result,AR-00135,incorrect,Fix steps were not applicable.,2026-10-14T18:00:00+00:00,True
+FB-00136,AR-00136,analyst-04,result,AR-00136,useful,Needs more diagnostic detail.,2026-10-14T18:00:00+00:00,True
+FB-00137,AR-00137,analyst-05,result,AR-00137,useful,Fix steps were not applicable.,2026-10-13T18:00:00+00:00,True
+FB-00138,AR-00138,analyst-06,result,AR-00138,useful,Escalated to resolver group.,2026-10-13T18:00:00+00:00,True
+FB-00139,AR-00139,analyst-07,result,AR-00139,useful,Evidence matched observed issue.,2026-10-13T18:00:00+00:00,True
+FB-00140,AR-00140,analyst-08,result,AR-00140,unresolved,Evidence matched observed issue.,2026-10-13T18:00:00+00:00,True
+FB-00141,AR-00141,analyst-09,result,AR-00141,useful,Needs more diagnostic detail.,2026-10-12T18:00:00+00:00,True
+FB-00142,AR-00142,analyst-10,result,AR-00142,incorrect,Needs more diagnostic detail.,2026-10-12T18:00:00+00:00,True
+FB-00143,AR-00143,analyst-11,result,AR-00143,useful,Evidence matched observed issue.,2026-10-12T18:00:00+00:00,True
+FB-00144,AR-00144,analyst-12,result,AR-00144,incorrect,Escalated to resolver group.,2026-10-12T18:00:00+00:00,True
+FB-00145,AR-00145,analyst-01,result,AR-00145,useful,Fix steps were not applicable.,2026-10-11T18:00:00+00:00,True
+FB-00146,AR-00146,analyst-02,result,AR-00146,useful,Escalated to resolver group.,2026-10-11T18:00:00+00:00,True
+FB-00147,AR-00147,analyst-03,result,AR-00147,incorrect,Escalated to resolver group.,2026-10-11T18:00:00+00:00,True
+FB-00148,AR-00148,analyst-04,result,AR-00148,useful,Needs more diagnostic detail.,2026-10-11T18:00:00+00:00,True
+FB-00149,AR-00149,analyst-05,result,AR-00149,useful,Needs more diagnostic detail.,2026-10-10T18:00:00+00:00,True
+FB-00150,AR-00150,analyst-06,result,AR-00150,useful,Fix steps were not applicable.,2026-10-10T18:00:00+00:00,True
+FB-00151,AR-00151,analyst-07,result,AR-00151,unresolved,Escalated to resolver group.,2026-10-10T18:00:00+00:00,True
+FB-00152,AR-00152,analyst-08,result,AR-00152,useful,Evidence matched observed issue.,2026-10-10T18:00:00+00:00,True
+FB-00153,AR-00153,analyst-09,result,AR-00153,unresolved,Evidence matched observed issue.,2026-10-09T18:00:00+00:00,True
+FB-00154,AR-00154,analyst-10,result,AR-00154,useful,Fix steps were not applicable.,2026-10-09T18:00:00+00:00,True
+FB-00155,AR-00155,analyst-11,result,AR-00155,useful,Escalated to resolver group.,2026-10-09T18:00:00+00:00,True
+FB-00156,AR-00156,analyst-12,result,AR-00156,useful,Fix steps were not applicable.,2026-10-09T18:00:00+00:00,True
+FB-00157,AR-00157,analyst-01,result,AR-00157,unresolved,Evidence matched observed issue.,2026-10-08T18:00:00+00:00,True
+FB-00158,AR-00158,analyst-02,result,AR-00158,useful,Escalated to resolver group.,2026-10-08T18:00:00+00:00,True
+FB-00159,AR-00159,analyst-03,result,AR-00159,useful,Fix steps were not applicable.,2026-10-08T18:00:00+00:00,True
+FB-00160,AR-00160,analyst-04,result,AR-00160,useful,Escalated to resolver group.,2026-10-08T18:00:00+00:00,True
+FB-00161,AR-00161,analyst-05,result,AR-00161,useful,Evidence matched observed issue.,2026-10-07T18:00:00+00:00,True
+FB-00162,AR-00162,analyst-06,result,AR-00162,unresolved,Escalated to resolver group.,2026-10-07T18:00:00+00:00,True
+FB-00163,AR-00163,analyst-07,result,AR-00163,useful,Needs more diagnostic detail.,2026-10-07T18:00:00+00:00,True
+FB-00164,AR-00164,analyst-08,result,AR-00164,useful,Escalated to resolver group.,2026-10-07T18:00:00+00:00,True
+FB-00165,AR-00165,analyst-09,result,AR-00165,useful,Needs more diagnostic detail.,2026-10-06T18:00:00+00:00,True
+FB-00166,AR-00166,analyst-10,result,AR-00166,useful,Escalated to resolver group.,2026-10-06T18:00:00+00:00,True
+FB-00167,AR-00167,analyst-11,result,AR-00167,useful,Fix steps were not applicable.,2026-10-06T18:00:00+00:00,True
+FB-00168,AR-00168,analyst-12,result,AR-00168,unresolved,Fix steps were not applicable.,2026-10-06T18:00:00+00:00,True
+FB-00169,AR-00169,analyst-01,result,AR-00169,useful,Needs more diagnostic detail.,2026-10-05T18:00:00+00:00,True
+FB-00170,AR-00170,analyst-02,result,AR-00170,useful,Evidence matched observed issue.,2026-10-05T18:00:00+00:00,True
+FB-00171,AR-00171,analyst-03,result,AR-00171,useful,Evidence matched observed issue.,2026-10-05T18:00:00+00:00,True
+FB-00172,AR-00172,analyst-04,result,AR-00172,useful,Fix steps were not applicable.,2026-10-05T18:00:00+00:00,True
+FB-00173,AR-00173,analyst-05,result,AR-00173,useful,Escalated to resolver group.,2026-10-04T18:00:00+00:00,True
+FB-00174,AR-00174,analyst-06,result,AR-00174,unresolved,Needs more diagnostic detail.,2026-10-04T18:00:00+00:00,True
+FB-00175,AR-00175,analyst-07,result,AR-00175,useful,Escalated to resolver group.,2026-10-04T18:00:00+00:00,True
+FB-00176,AR-00176,analyst-08,result,AR-00176,unresolved,Needs more diagnostic detail.,2026-10-04T18:00:00+00:00,True
+FB-00177,AR-00177,analyst-09,result,AR-00177,useful,Evidence matched observed issue.,2026-10-03T18:00:00+00:00,True
+FB-00178,AR-00178,analyst-10,result,AR-00178,useful,Fix steps were not applicable.,2026-10-03T18:00:00+00:00,True
+FB-00179,AR-00179,analyst-11,result,AR-00179,useful,Evidence matched observed issue.,2026-10-03T18:00:00+00:00,True
+FB-00180,AR-00180,analyst-12,result,AR-00180,incorrect,Evidence matched observed issue.,2026-10-03T18:00:00+00:00,True
