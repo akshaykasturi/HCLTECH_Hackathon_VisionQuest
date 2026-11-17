@@ -19,9 +19,10 @@ export const fail = (status: number, code: string, message = "error"): Reply =>
 
 export function defaultRoutes(): Record<string, Handler> {
   return {
-    "GET /health": ok(HEALTH_OK),
-    "GET /health/ready": ok(HEALTH_OK),
+    "GET /api/health": ok(HEALTH_OK),
+    "GET /api/health/ready": ok(HEALTH_OK),
     "GET /api/audit/results": ok([]),
+    "GET /api/tickets/history": ok([]),
   };
 }
 

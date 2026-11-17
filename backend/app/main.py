@@ -6,8 +6,10 @@ Swagger UI: http://127.0.0.1:8000/docs
 
 Every response is {ok, data, error} and carries an X-Request-ID header.
 
-  /health        200 whenever the API runs: {api, database, warmup, warmup_detail}
-  /health/ready  200 only after every warm-up function has finished and the audit database is up; else 503
+  /health        200 whenever the API runs: {api, database, database_detail, warmup, warmup_detail}
+  /health/ready  200 only after every warm-up function has finished and the database is up; else 503
+                 Both also answer under /api (/api/health, /api/health/ready): ad blockers often block "/health".
+                 database = the real database (db/repo.ping, SELECT 1); the legacy audit store only if db/ is missing.
   /api/audit/*   verify the audit chain, read saved results, add reviewer feedback (app/common/api.py)
 
 Warm-up: slow things (building the doc search index, loading a model) run once at startup, in the
@@ -191,19 +193,32 @@ def create_app(audit_db_path: Optional[Path] = None, warmups: Optional[list[Call
         message = exc.detail if isinstance(exc.detail, str) and exc.status_code < 500 else "Request failed."
         return error_response(exc.status_code, code, message)
 
-    def status() -> dict[str, str]:
+    def database_status() -> tuple[str, str]:
+        """("up" | "down", detail). The real database (db/repo.ping: SELECT 1 on Neon or the SQLite file); the old
+        local audit store only if db/ is missing. Any error -> "down" with the error class, never a 500."""
+        ping = optional("app.db.repo", "ping")
         try:
+            if ping is not None:
+                return "up", f"{ping()}: SELECT 1 ok"
             audit.init_db(app.state.audit_db_path)
-            database = "up"
-        except audit.AuditError:
-            database = "down"
-        return {"api": "up", "database": database, "warmup": warmup.state, "warmup_detail": warmup.detail}
+            return "up", "legacy audit store (app.db missing)"
+        except Exception as exc:  # the message could hold the connection URL: class name only
+            return "down", f"{exc.__class__.__name__}"
 
+    def status() -> dict[str, str]:
+        database, detail = database_status()
+        return {"api": "up", "database": database, "database_detail": detail, "warmup": warmup.state,
+                "warmup_detail": warmup.detail}
+
+    # Same handlers under /api too: some ad blockers block URLs containing "/health". Render's health check
+    # keeps /health/ready.
     @app.get("/health", tags=["health"], summary="Liveness and component status")
+    @app.get("/api/health", tags=["health"], summary="Liveness and component status (same as /health)")
     def health():
         return ok(status())
 
     @app.get("/health/ready", tags=["health"], summary="Ready to serve: warm-up done and database up")
+    @app.get("/api/health/ready", tags=["health"], summary="Ready to serve (same as /health/ready)")
     def ready(request: Request):
         current = status()
         if current["warmup"] != "ready":
@@ -212,7 +227,7 @@ def create_app(audit_db_path: Optional[Path] = None, warmups: Optional[list[Call
             return error_response(503, code, f"Not ready: {current['warmup_detail']}.")
         if current["database"] != "up":
             request.state.error_code = "DATABASE_UNAVAILABLE"
-            return error_response(503, "DATABASE_UNAVAILABLE", "The audit database is not available.")
+            return error_response(503, "DATABASE_UNAVAILABLE", "The database is not available.")
         return ok(current)
 
     # Saved results and reviewer feedback are analyst work: no anonymous or employee access.

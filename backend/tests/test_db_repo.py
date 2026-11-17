@@ -46,10 +46,35 @@ def test_save_then_history_shows_it_newest_first():
     repo.save_result(result("new", created=T0 + timedelta(hours=1)), ANA)
     rows = repo.history(ANA, limit=10, offset=0)
     assert [r["result_id"] for r in rows] == ["new", "old"]
-    assert rows[0] == {"result_id": "new", "created_at": (T0 + timedelta(hours=1)).isoformat(),
-                       "subject": "VPN error 809 for <EMAIL>", "outcome": "RECOMMEND", "confidence": 0.8,
-                       "latest_verdict": None, "resolved_at": None, "reviewer": None}
+    row = rows[0]
+    assert {k: row[k] for k in ("result_id", "created_at", "subject", "outcome", "confidence", "latest_verdict",
+                                "resolved_at", "reviewer")} == {
+        "result_id": "new", "created_at": (T0 + timedelta(hours=1)).isoformat(),
+        "subject": "VPN error 809 for <EMAIL>", "outcome": "RECOMMEND", "confidence": 0.8,
+        "latest_verdict": None, "resolved_at": None, "reviewer": None}
     assert [r["result_id"] for r in repo.history(ANA, limit=1, offset=1)] == ["old"]
+
+
+def test_history_rows_have_the_shape_the_frontend_adapter_reads():
+    """frontend/src/lib/api.ts toHistoryEntry() needs these keys (Review History and Audit pages)."""
+    repo.save_result(result(), ANA)
+    repo.add_feedback("r1", ANA, FeedbackIn(verdict="incorrect", note="no"))
+    repo.add_feedback("r1", LEE, FeedbackIn(verdict="useful", target="match", target_id="INC1"))
+    repo.resolve("r1", LEE)
+    row = repo.history(ANA)[0]
+    assert row["ticket_masked"]["subject"] == "VPN error 809 for <EMAIL>"
+    assert row["user_id"] == "ana" and row["evidence_ids"] == ["INC1"] and row["reasons"] == ["STRONG_MATCH"]
+    assert row["classification"]["category"]["label"] == "Network" and row["model_version"] == "test"
+    assert [f["verdict"] for f in row["feedback"]] == ["incorrect", "useful"]          # oldest first, all targets
+    assert row["feedback"][1] | {"created_at": None} == {"verdict": "useful", "note_masked": None,
+                                                         "reviewer_id": "lee", "target": "match",
+                                                         "target_id": "INC1", "created_at": None}
+    assert row["resolution"]["resolved_by"] == "lee" and row["resolution"]["resolved_at"] == row["resolved_at"]
+    assert row["latest_verdict"] == "incorrect" and row["reviewer"] == "ana"          # match verdicts don't count
+
+
+def test_ping_answers_the_dialect():
+    assert repo.ping() == "sqlite"
 
 
 def test_an_employee_sees_only_their_own_results():

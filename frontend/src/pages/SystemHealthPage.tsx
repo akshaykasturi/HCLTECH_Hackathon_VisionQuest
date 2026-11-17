@@ -46,7 +46,7 @@ export function SystemHealthPage() {
   return (
     <>
       <PageHeader title="System Health"
-                  description="Live status from GET /health and GET /health/ready. Checked when you open this page or press Refresh (no background polling)."
+                  description="Live status from GET /api/health and GET /api/health/ready. Checked when you open this page or press Refresh (no background polling)."
                   actions={<Button onClick={refresh} loading={health.loading || ready.loading} loadingText="Checking…"
                                    icon={<RefreshCw className="h-4 w-4" aria-hidden />}>Refresh</Button>} />
       {health.error ? <div className="mb-6"><ErrorAlert error={health.error} onRetry={refresh} retrying={health.loading} /></div> : null}
@@ -58,7 +58,7 @@ export function SystemHealthPage() {
         <Tile title="Warm-up" icon={<Workflow className="h-4 w-4" />} state={status.warmup} loading={loading}
               detail={health.data?.warmup_detail ? <>Backend says: <span className="font-mono text-ink">{health.data.warmup_detail}</span></> : "Unknown while the API is unreachable."} />
         <Tile title="Readiness" icon={<Gauge className="h-4 w-4" />} state={ready.state} loading={ready.loading}
-              detail={ready.state === "healthy" ? "Ready to serve requests (/health/ready)." : ready.state === "not_ready" ? "Not ready yet: still warming up, warm-up failed, or the audit database is down." : "Readiness could not be checked."} />
+              detail={ready.state === "healthy" ? "Ready to serve requests (/api/health/ready)." : ready.state === "not_ready" ? "Not ready yet: still warming up, warm-up failed, or the database is down." : "Readiness could not be checked."} />
       </div>
       <p className="mt-4 text-sm text-muted" aria-live="polite">
         Last successful check: {health.loadedAt ? formatClock(health.loadedAt) : "never"}

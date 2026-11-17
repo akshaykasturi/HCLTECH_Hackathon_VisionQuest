@@ -1,15 +1,22 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Fingerprint, ListOrdered, RefreshCw, Search, ShieldCheck, ShieldX } from "lucide-react";
-import { ID_PATTERN } from "../lib/api";
-import { formatClock, formatTimestamp, shortHash, valueToText } from "../lib/format";
-import type { ChainStatus, FeedbackRecord, SavedResult } from "../lib/types";
+// Audit History: what the permanent database holds (Neon Postgres in production).
+//   list   GET /api/tickets/history (db/repo.history): every saved analysis, newest first, with its feedback rows
+//          and resolution. Masked data only.
+//   chain  GET /api/tickets/audit/verify (db/repo.verify_chain, role lead): recomputes every audit event's hash and
+//          every stored row's fingerprint, so an edited result, feedback or resolution row is found.
+// The older /api/audit/* routes are the legacy local audit store (docs/ARCHITECTURE.md) and are not used here.
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Fingerprint, ListOrdered, RefreshCw, ShieldCheck, ShieldX } from "lucide-react";
+import { formatClock, formatConfidence, formatTimestamp, valueToText } from "../lib/format";
+import type { DbChainStatus, HistoryEntry } from "../lib/types";
 import { useAppData, useLoader } from "../state/AppData";
 import { OutcomeBadge } from "../components/common/status";
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorAlert, LoadingBlock, Mono, PageHeader } from "../components/common/ui";
 
+const PAGE_SIZE = 50;
+
 function ChainCard() {
   const { api } = useAppData();
-  const [result, setResult] = useState<ChainStatus | null>(null);
+  const [result, setResult] = useState<DbChainStatus | null>(null);
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
@@ -21,7 +28,7 @@ function ChainCard() {
     setLoading(true);
     setError(null);
     try {
-      setResult(await api.verifyAudit());
+      setResult(await api.verifyChain());
       setCheckedAt(new Date());
     } catch (e) {
       setError(e);
@@ -35,19 +42,19 @@ function ChainCard() {
   return (
     <Card aria-labelledby="chain-title">
       <CardHeader id="chain-title" icon={<Fingerprint className="h-5 w-5" />} title="Audit chain verification"
-                  description="Recalculates every SHA-256 hash in the append-only audit log (GET /api/audit/verify)."
+                  description="Recalculates every SHA-256 hash in the database's audit chain and checks each saved row is unchanged (lead role)."
                   actions={<Button variant="primary" onClick={() => void verify()} loading={loading} loadingText="Verifying…"
                                    icon={<ShieldCheck className="h-4 w-4" aria-hidden />}>Verify chain</Button>} />
       <div className="p-5" aria-live="polite">
         {error ? <ErrorAlert error={error} onRetry={() => void verify()} retrying={loading} /> : !result ? (
           <p className="text-sm text-muted">Not checked yet. Press Verify chain.</p>
-        ) : result.valid ? (
+        ) : result.ok ? (
           <div className="flex items-start gap-3 rounded-lg border border-success/40 bg-success-soft p-4">
             <ShieldCheck className="mt-0.5 h-5 w-5 text-success-text" aria-hidden />
             <div className="text-sm">
               <p className="font-semibold text-success-text">Chain verified</p>
-              <p className="mt-0.5 text-slate-700">{result.events_checked} events checked, no gaps or edits found.</p>
-              <p className="mt-1 text-xs text-muted">Head hash <Mono>{shortHash(result.head_hash, 16)}</Mono>{checkedAt && ` · checked at ${formatClock(checkedAt)}`}</p>
+              <p className="mt-0.5 text-slate-700">{result.n_events} events checked, no gaps or edits found.</p>
+              {checkedAt && <p className="mt-1 text-xs text-muted">Checked at {formatClock(checkedAt)}</p>}
             </div>
           </div>
         ) : (
@@ -56,9 +63,10 @@ function ChainCard() {
             <div className="text-sm">
               <p className="font-semibold text-danger-text">Chain check failed</p>
               <p className="mt-0.5 text-slate-700">
-                {result.first_bad_seq !== null ? `At event #${result.first_bad_seq}: ` : ""}{result.reason ?? "unknown reason"}
+                {result.first_broken_seq !== null
+                  ? `Event #${result.first_broken_seq} or the row it recorded was changed after it was written.`
+                  : "The chain could not be verified."}
               </p>
-              <p className="mt-1 text-xs text-muted">{result.events_checked} events checked before the problem.</p>
             </div>
           </div>
         )}
@@ -67,120 +75,84 @@ function ChainCard() {
   );
 }
 
-function LookupCard({ selected }: { selected: string | null }) {
-  const { api } = useAppData();
-  const [value, setValue] = useState("");
-  const [inputError, setInputError] = useState<string | null>(null);
-  const [found, setFound] = useState<{ result: SavedResult; feedback: FeedbackRecord[] } | null>(null);
-  const [error, setError] = useState<unknown>(null);
-  const [loading, setLoading] = useState(false);
+function latestVerdict(entry: HistoryEntry): string | null {
+  const own = entry.feedback.filter((f) => f.aboutTicketId === null);
+  return own.length ? own[own.length - 1].verdict : null;
+}
 
-  const lookup = useCallback(async (raw: string) => {
-    const id = raw.trim();
-    if (!ID_PATTERN.test(id)) {
-      setInputError("Enter a result ID (letters, digits, dots, dashes or underscores).");
-      return;
-    }
-    setInputError(null);
-    setLoading(true);
-    setError(null);
-    setFound(null);
-    try {
-      const [result, feedback] = await Promise.all([api.result(id), api.feedback(id)]);
-      setFound({ result, feedback });
-    } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [api]);
-
-  useEffect(() => {
-    if (selected) {
-      setValue(selected);
-      void lookup(selected);
-    }
-  }, [selected, lookup]);
-
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    void lookup(value);
-  }
-
+function ResultRow({ entry, open, onToggle }: { entry: HistoryEntry; open: boolean; onToggle: () => void }) {
+  const verdict = latestVerdict(entry);
   return (
-    <Card aria-labelledby="lookup-title">
-      <CardHeader id="lookup-title" icon={<Search className="h-5 w-5" />} title="Look up a result"
-                  description="Reads one saved result and its reviewer feedback from the audit log." />
-      <div className="space-y-4 p-5">
-        <form onSubmit={submit} noValidate className="flex flex-wrap items-start gap-2">
-          <div className="min-w-[14rem] flex-1">
-            <label htmlFor="lookup-id" className="sr-only">Result ID</label>
-            <input id="lookup-id" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Result ID"
-                   aria-invalid={Boolean(inputError)} aria-describedby={inputError ? "lookup-error" : undefined}
-                   className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            {inputError && <p id="lookup-error" className="mt-1.5 text-sm text-danger-text">{inputError}</p>}
-          </div>
-          <Button type="submit" variant="primary" loading={loading} loadingText="Looking up…">Look up</Button>
-        </form>
-        {error ? <ErrorAlert error={error} compact /> : null}
-        {found && (
-          <div className="rounded-lg border border-slate-200 p-4 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono font-semibold">{found.result.case_id}</span>
-              <OutcomeBadge outcome={typeof found.result.outcome === "string" ? found.result.outcome : null} />
-            </div>
-            <p className="mt-2 text-xs text-muted">{found.feedback.length} feedback {found.feedback.length === 1 ? "record" : "records"}</p>
-            {found.feedback.length > 0 && (
-              <ul aria-label="Feedback records" className="mt-2 space-y-1.5 border-t border-slate-100 pt-3">
-                {found.feedback.map((f) => (
-                  <li key={f.feedback_id} className="flex flex-wrap items-center gap-2 text-xs">
-                    <Badge>{f.verdict}</Badge><span>{f.item_id ?? "Whole result"}</span>
-                    {f.note && <span className="text-slate-700">{f.note}</span>}
-                    <span className="text-muted">{formatTimestamp(f.created_at)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <details className="mt-3">
-              <summary className="cursor-pointer text-primary">Saved data (masked)</summary>
-              <pre className="mt-2 max-h-80 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs">{valueToText(found.result)}</pre>
-            </details>
-          </div>
-        )}
+    <li className="px-5 py-3 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={onToggle} aria-expanded={open}
+                className="rounded font-mono font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+          {entry.id}
+        </button>
+        <OutcomeBadge outcome={entry.outcome} />
+        <span className="min-w-0 flex-1 truncate text-slate-700">{entry.ticket.subject}</span>
+        {verdict && <Badge>{verdict}</Badge>}
+        {entry.resolution && <Badge tone="success">resolved</Badge>}
+        <span className="text-xs text-muted">
+          {formatTimestamp(entry.analysedAt)} · {entry.feedback.length} feedback
+        </span>
       </div>
-    </Card>
+      {open && (
+        <div className="mt-3 rounded-lg border border-slate-200 p-4">
+          <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-2">
+            <div><dt className="inline text-muted">Analyst: </dt><dd className="inline">{entry.analyst ?? "-"}</dd></div>
+            <div><dt className="inline text-muted">Confidence: </dt><dd className="inline">{formatConfidence(entry.confidence)}</dd></div>
+            <div><dt className="inline text-muted">Reasons: </dt><dd className="inline">{entry.reasons.join(", ") || "-"}</dd></div>
+            <div><dt className="inline text-muted">Evidence: </dt><dd className="inline"><Mono>{entry.evidence.join(", ") || "-"}</Mono></dd></div>
+            <div><dt className="inline text-muted">Resolved: </dt><dd className="inline">
+              {entry.resolution ? `${formatTimestamp(entry.resolution.resolvedAt)} by ${entry.resolution.resolvedBy ?? "-"}` : "not yet"}
+            </dd></div>
+          </dl>
+          {entry.feedback.length > 0 && (
+            <ul aria-label="Feedback records" className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
+              {entry.feedback.map((f, i) => (
+                <li key={i} className="flex flex-wrap items-center gap-2 text-xs">
+                  <Badge>{f.verdict}</Badge>
+                  <span>{f.aboutTicketId ? `Match ${f.aboutTicketId}` : "Whole result"}</span>
+                  {f.reviewer && <span className="text-muted">by {f.reviewer}</span>}
+                  {f.note && <span className="text-slate-700">{f.note}</span>}
+                  <span className="text-muted">{formatTimestamp(f.at)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <details className="mt-3">
+            <summary className="cursor-pointer text-primary">Saved data (masked)</summary>
+            <pre className="mt-2 max-h-80 overflow-auto rounded bg-slate-50 p-3 font-mono text-xs">{valueToText(entry)}</pre>
+          </details>
+        </div>
+      )}
+    </li>
   );
 }
 
-function ResultsCard({ onSelect }: { onSelect: (id: string) => void }) {
+function ResultsCard() {
   const { api } = useAppData();
-  const loader = useLoader(useCallback((signal: AbortSignal) => api.results(signal), [api]));
+  const loader = useLoader(useCallback((signal: AbortSignal) => api.history(PAGE_SIZE, 0, signal), [api]));
   const { ensure } = loader;
   useEffect(() => ensure(), [ensure]);
   const { data, error, loading } = loader.state;
+  const [open, setOpen] = useState<string | null>(null);
 
   return (
     <Card className="lg:col-span-2" aria-labelledby="results-title">
       <CardHeader id="results-title" icon={<ListOrdered className="h-5 w-5" />} title="Saved results"
-                  description="Newest first (GET /api/audit/results)."
+                  description={`Newest first, up to ${PAGE_SIZE} (GET /api/tickets/history). Click an ID for its feedback and saved data.`}
                   actions={<Button onClick={() => void loader.load()} loading={loading} loadingText="Loading…"
                                    icon={<RefreshCw className="h-4 w-4" aria-hidden />}>Refresh</Button>} />
       {error ? <div className="p-5"><ErrorAlert error={error} onRetry={() => void loader.load()} /></div>
         : !data ? <LoadingBlock label="Loading saved results" />
-        : data.length === 0 ? <EmptyState title="No results saved yet">Results appear here once the pipeline records them.</EmptyState>
+        : data.length === 0 ? <EmptyState title="No results saved yet">Results appear here after a ticket is analysed.</EmptyState>
         : (
-          <ul className="divide-y divide-slate-100">
-            {data.map((r) => (
-              <li key={r.result_id} className="flex flex-wrap items-center gap-3 px-5 py-3 text-sm">
-                <button type="button" onClick={() => onSelect(r.result_id)}
-                        className="rounded font-mono font-medium text-primary hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
-                  {r.result_id}
-                </button>
-                <span className="font-mono text-muted">{r.case_id}</span>
-                <OutcomeBadge outcome={r.outcome} />
-                {r.summary && <span className="min-w-0 flex-1 truncate text-slate-700">{r.summary}</span>}
-                <span className="text-xs text-muted">{formatTimestamp(r.recorded_at)} · {r.feedback_count} feedback</span>
-              </li>
+          <ul className="divide-y divide-slate-100" aria-label="Saved results list">
+            {data.map((entry) => (
+              <ResultRow key={entry.id} entry={entry} open={open === entry.id}
+                         onToggle={() => setOpen(open === entry.id ? null : entry.id)} />
             ))}
           </ul>
         )}
@@ -189,14 +161,13 @@ function ResultsCard({ onSelect }: { onSelect: (id: string) => void }) {
 }
 
 export function AuditPage() {
-  const [selected, setSelected] = useState<string | null>(null);
   return (
     <>
-      <PageHeader title="Audit History" description="The backend keeps an append-only, hash-chained SQLite log of every saved result and every reviewer verdict." />
+      <PageHeader title="Audit History"
+                  description="Every saved analysis and reviewer verdict in the permanent database, with a tamper-evident hash chain over all writes." />
       <div className="grid gap-6 lg:grid-cols-2">
         <ChainCard />
-        <LookupCard selected={selected} />
-        <ResultsCard onSelect={setSelected} />
+        <ResultsCard />
       </div>
     </>
   );

@@ -256,25 +256,44 @@ def _latest_result_feedback(s: Session, result_ids: Optional[list[str]] = None) 
 
 
 def history(user: User, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
-    """Saved results, newest first, with the latest verdict and resolution. An employee sees only their own."""
+    """Saved results, newest first. An employee sees only their own.
+
+    Each row is the stored result (masked) with its feedback rows (oldest first) and its resolution, in the
+    shape the frontend's history adapter reads (frontend/src/lib/api.ts toHistoryEntry), plus four flat
+    summary fields: subject, latest_verdict, reviewer (of the latest result verdict) and resolved_at."""
     with get_session() as s:
         q = select(AnalysisResultRow).order_by(AnalysisResultRow.created_at.desc(), AnalysisResultRow.result_id)
         if user.role == "employee":
             q = q.where(AnalysisResultRow.user_id == user.username)
         rows = list(s.execute(q.limit(limit).offset(offset)).scalars())
         ids = [r.result_id for r in rows]
-        latest = _latest_result_feedback(s, ids)
-        resolved = {r.result_id: r for r in
-                    s.execute(select(ResolutionRow).where(ResolutionRow.result_id.in_(ids))).scalars()} if ids else {}
+        feedback: dict[str, list[FeedbackRow]] = defaultdict(list)
+        resolved: dict[str, ResolutionRow] = {}
+        if ids:
+            for fb in s.execute(select(FeedbackRow).where(FeedbackRow.result_id.in_(ids))
+                                .order_by(FeedbackRow.created_at, FeedbackRow.id)).scalars():
+                feedback[fb.result_id].append(fb)
+            resolved = {r.result_id: r for r in
+                        s.execute(select(ResolutionRow).where(ResolutionRow.result_id.in_(ids))).scalars()}
         out = []
         for r in rows:
-            fb = latest.get(r.result_id)
+            fbs = feedback.get(r.result_id, [])
+            latest = next((f for f in reversed(fbs) if f.target == "result"), None)
             res = resolved.get(r.result_id)
-            out.append({"result_id": r.result_id, "created_at": _iso(r.created_at),
-                        "subject": (r.ticket_masked or {}).get("subject"), "outcome": r.outcome,
-                        "confidence": r.confidence, "latest_verdict": fb.verdict if fb else None,
-                        "resolved_at": _iso(res.resolved_at) if res else None,
-                        "reviewer": fb.reviewer_id if fb else None})
+            content = _result_content(r)
+            content.pop("source", None)
+            out.append({
+                **content,
+                "feedback": [{"verdict": f.verdict, "note_masked": f.note_masked, "reviewer_id": f.reviewer_id,
+                              "target": f.target, "target_id": f.target_id, "created_at": _iso(f.created_at)}
+                             for f in fbs],
+                "resolution": ({"resolved_by": res.resolved_by, "resolved_at": _iso(res.resolved_at)}
+                               if res else None),
+                "subject": (r.ticket_masked or {}).get("subject"),
+                "latest_verdict": latest.verdict if latest else None,
+                "reviewer": latest.reviewer_id if latest else None,
+                "resolved_at": _iso(res.resolved_at) if res else None,
+            })
         return out
 
 
@@ -322,3 +341,10 @@ def feedback_counts(ticket_ids: Iterable[str]) -> dict[str, dict[str, int]]:
     for (tid, _, _), verdict in latest.items():
         out.setdefault(tid, {v: 0 for v in VERDICTS})[verdict] += 1
     return out
+
+
+def ping() -> str:
+    """SELECT 1 on the database (for /health). Returns the dialect name ("postgresql" or "sqlite"); raises if down."""
+    with get_session() as s:
+        s.execute(text("SELECT 1"))
+        return s.get_bind().dialect.name
