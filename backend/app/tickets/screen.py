@@ -4,7 +4,9 @@
 
 - blocked: an attack on the assistant itself (prompt injection, role override, asking for someone else's
   password, dumping other users' data). The gate turns this into BLOCKED: no search, no LLM.
-- safety:  a physical hazard (smoke, sparks, swollen battery, spill). The gate escalates it as P1.
+- safety:  a physical hazard (smoke, sparks, swollen battery, spill), or something a person must decide
+           (needs_human: PRIVILEGED_REQUEST, REGULATED_LEGAL, REPEATED_FAILURE). The gate escalates it and
+           passes the codes on as the reason.
 
 A ticket ABOUT security ("I got a phishing email", "my account is locked") is a normal ticket, not an attack.
 
@@ -32,6 +34,10 @@ from app.tickets.models import ScreenResult, TicketIn
 _RULES_FILE = Path(__file__).with_name("screen.yaml")
 # Zero-width and direction-control characters: invisible, but they split words so patterns miss them.
 _INVISIBLE_RE = re.compile("[­​-‏‪-‮⁠-⁤﻿]")
+# Cyrillic and Greek letters that look like Latin ones ("іgnore" with a Cyrillic і): mapped to Latin so
+# look-alike spellings can't dodge the patterns. NFKC alone does not do this.
+_CONFUSABLES = str.maketrans("аеорсухіјѕԁԛԝАЕОРСУХІЈЅΑΒΕΗΙΚΜΝΟΡΤΥΧοαειντυ",
+                             "aeopcyxijsdqwAEOPCYXIJSABEHIKMNOPTYXoaeivtu")
 # A run of 16+ base64 characters (with optional padding): long enough to hide a short instruction.
 _BASE64_RE = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{16,}={0,2}(?![A-Za-z0-9+/=])")
 
@@ -48,7 +54,7 @@ def normalise(text: str) -> str:
     """NFKC (full-width and look-alike forms -> plain letters), drop invisible characters,
     lower case, one space between words."""
     text = unicodedata.normalize("NFKC", text)
-    text = _INVISIBLE_RE.sub("", text)
+    text = _INVISIBLE_RE.sub("", text).translate(_CONFUSABLES)
     return " ".join(text.lower().split())
 
 
@@ -83,4 +89,6 @@ def screen(ticket: TicketIn) -> ScreenResult:
     text = _ticket_text(ticket)
     blocked = _matching_codes(text, "blocked")
     safety = _matching_codes(text, "safety")
-    return ScreenResult(blocked=bool(blocked), safety=bool(safety), codes=blocked + safety)
+    needs_human = _matching_codes(text, "needs_human")
+    return ScreenResult(blocked=bool(blocked), safety=bool(safety or needs_human),
+                        codes=blocked + safety + needs_human)

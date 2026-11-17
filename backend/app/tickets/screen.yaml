@@ -20,8 +20,15 @@ blocked:
     - '\bwithout\s+(any\s+)?(masking|redaction|redacting|filtering)\b'
     - '\bdecode\b.{0,60}\b(do|follow|run|execute|obey)\b'
     - '\b(follow|obey|execute|run)\s+(every|all|each|the)\s+(instructions?|steps|commands)\s+(in|at|from|on)\s+(it|this|that|the\s+(link|page|url|file|paste))\b'
-    # Common non-English forms of "ignore previous instructions".
+    - '\b(begin|start|end)\s+(of\s+)?(new\s+|system\s+|admin\s+)?(instructions?|prompt|system\s+message)\b'
+    - '#{3,}\s*(system|instructions?|override|admin|new\s+rules|policy)\b'
+    - '\b(ignore|skip|bypass|disable|turn\s+off|switch\s+off)\s+(the\s+)?(gate|screen(ing)?|output\s+checks|escalation(\s+rules)?|review\s+step|policy\s+engine)\b'
+    - '\b(dear|hey|hi|hello|attention|note\s+to)\s+(ai|assistant|bot|model|chatbot|llm|gpt)\b'
+    - '\b(always|must)\s+(output|return|give|write)\s+(fix\s+)?steps\b'
+    # Common non-English forms of "ignore previous instructions" (Spanish, French, German, Portuguese, Hindi).
     - '\bignora\s+(todas\s+)?(las\s+)?instrucciones\b|\bignore[sz]?\s+(toutes\s+)?les\s+instructions\b|\bignoriere\s+(alle\s+)?(vorherigen\s+)?anweisungen\b|\bignore\s+todas\s+as\s+instru'
+    - '(पिछले|पिछली|सभी|पूर्व).{0,20}(निर्देश|नियम).{0,30}(अनदेखा|नज़रअंदाज़|नजरअंदाज|भूल\s*जाओ|मत\s+मानो)'
+    - '\b(pichle|pichhle|sabhi|saare|sare)\s+(sabhi\s+|saare\s+)?(nirdesh|nirdeshon|instructions|rules|niyam)\s+(ko\s+)?(ignore|bhool|bhul|andekha|nazarandaz)'
   ROLE_OVERRIDE:
     - '\byou\s+are\s+now\s+(a|an|the|my|dan|in\s+developer|admin|administrator|root|god|unrestricted|free)\b'
     - '\b(pretend|imagine)\s+(to\s+be|you\s+are)\b'
@@ -29,6 +36,8 @@ blocked:
     - '\b(developer|god|dan|jailbreak)\s+mode\b'
     - '\bjailbreak'
     - '\blet''?s\s+play\s+a\s+game\b'
+    - '\byou\s+are\s+(now\s+)?(called\s+|named\s+)?[a-z0-9]+(bot|gpt)\b'
+    - '\b(from\s+now\s+on|for\s+this\s+chat)\s+you\s+(are|will\s+be|act)\b'
     - '\b(never\s+refuses?|always\s+answers?\s+(fully|everything|anything|every\s+question)|answers\s+(anything|everything)\s+without)\b'
   CREDENTIAL_REQUEST:
     # Asking for someone else's secret. "Reset my password" and "Outlook asks for my password" are normal tickets.
@@ -86,7 +95,41 @@ safety:
     - '\bactive\s+(breach|intrusion|attack|ransomware)\b'
     - '\b(malware|ransomware|virus|worm)\b.{0,30}\b(spreading|spread\s+to|encrypting|across)\b'
     - '\b(files|shares?|drives?)\s+(are\s+)?(being\s+)?encrypted\b.{0,40}\b(ransom|note|bitcoin)'
+  SAFETY_HEAT:
+    # Equipment rooms or power kit overheating. A laptop that "gets hot" is a normal hardware ticket.
+    - '\bups\b.{0,50}\b(very\s+hot|too\s+hot|overheat\w*|smok\w*|swollen|bulging|burning)\b'
+    - '\b(server\s+room|data\s*cent(er|re)|comms\s+(room|cupboard|closet)|rack)\b.{0,50}\b(very\s+hot|too\s+hot|overheat\w*|temperature\s+(is\s+)?(high|rising|above)|(air\s*con\w*|ac|cooling)\s+(has\s+)?(failed|down|broken|stopped|off))\b'
+    - '\b(air\s*con\w*|ac|cooling)\s+(has\s+)?(failed|down|broken|stopped)\b.{0,50}\b(server\s+room|data\s*cent(er|re)|comms\s+(room|cupboard)|rack)\b'
   SAFETY_SPILL:
     - '\b(spill(ed|t|s)?|knocked\s+over)\b.{0,40}\b(coffee|water|tea|drink|liquid|juice|soda)\b'
     - '\b(coffee|water|tea|drink|liquid|juice|soda)\b.{0,40}\bspill'
     - '\bwater\s+(leak|leaking|dripping)\b'
+    - '\b(water|flood\w*)\b.{0,30}\b(on|onto|into|near|under|over)\s+(the\s+)?(rack|server|ups|power|switch(es)?|sockets?|equipment|electrical|cables?|floor\s+box)\b'
+
+# Not an attack and not a physical hazard, but a person must decide. Sets ScreenResult.safety = True; the gate
+# escalates with these codes as the reason. Tuned on val only.
+needs_human:
+  PRIVILEGED_REQUEST:
+    # Destroying or overwriting shared or production data, mass wipes, admin rights.
+    - '\b(drop|delete|truncate|purge|wipe|erase|destroy)\b.{0,40}\b(database|db|tables?|schema|production|prod|cluster|all\s+(users|mailboxes|accounts|records|files))\b'
+    - '\b(remote(ly)?\s+wipe|wipe\s+and\s+(factory\s+)?reset|factory\s+reset|re-?image)\b.{0,40}\b(all|every|each|whole\s+fleet|the\s+fleet)\b'
+    - '\b(all|every|each)\s+\w+(\s+\w+)?\s+(remote(ly)?\s+wipe|factory\s+reset)\b'
+    - '\b(restore|roll\s*back|rollback|revert|overwrite)\b.{0,60}\b(over|onto|on)\s+(the\s+)?(live|production|prod)\b'
+    - '\b(restore|roll\s*back|rollback|revert)\b.{0,40}\b(live|production|prod)\s+(database|db|system|server|crm|erp|cluster)\b'
+    - '\b(add|grant|give|make|put)\b.{0,40}\b(domain\s+admins?|enterprise\s+admins?|global\s+admin(istrator)?|schema\s+admins?|root\s+access|sudo\s+access|admin(istrator)?\s+(rights|access|privileges|role))\b'
+    - '\b(disable|turn\s+off)\s+(mfa|2fa|multi-?factor)\s+for\s+(all|every|the\s+(whole|entire))\b'
+  REGULATED_LEGAL:
+    - '\blegal\s+(hold|counsel|team\s+(asked|asks|requires)|asked|request|department\s+asked)\b'
+    - '\b(litigation|subpoena|court\s+order|e-?discovery|under\s+investigation|internal\s+investigation)\b'
+    - '\bpreserve\b.{0,40}\b(mailbox|onedrive|data|records|evidence|emails|files)\b'
+    - '\b(gdpr|hipaa|pci(\s+dss)?|dsar|data\s+subject\s+(access\s+)?request|right\s+to\s+(be\s+forgotten|erasure))\b'
+    - '\b(personal|customer|patient|employee)\s+data\s+(breach|was\s+exposed|exposed|leaked|sent\s+to\s+the\s+wrong)\b'
+    # A lost or stolen device holding sensitive files.
+    - '\b(lost|left|stolen|missing)\b.{0,60}\b(laptop|phone|device|usb|drive|tablet)\b.{0,120}\b(hr|patient|customer|payroll|personal|confidential|sensitive|case|medical|salary)\s+(case\s+)?(files|data|records|documents)\b'
+    - '\b(laptop|phone|device|usb|drive|tablet)\s+(was|is|got|has\s+been)\s+(lost|stolen|missing)\b.{0,120}\b(hr|patient|customer|payroll|personal|confidential|sensitive|case|medical|salary)\s+(case\s+)?(files|data|records|documents)\b'
+  REPEATED_FAILURE:
+    # The documented fix was already tried and failed: more of the same won't help.
+    - '\b(still|keeps?|continues?\s+to)\s+(fail\w*|happening|broken|dropping|crashing|not\s+working)\b.{0,40}\b(after|despite)\s+(the\s+|following\s+the\s+|applying\s+the\s+|trying\s+the\s+)?(kb|guide|steps|fix|workaround|article|instructions)\b'
+    - '\b(followed|tried|applied|did)\s+(the\s+)?(\w+\s+)?(kb|guide|steps|fix|article|instructions|workaround)\b.{0,30}\b(twice|three\s+times|multiple\s+times|several\s+times|again)\b'
+    - '\b(reopened|re-?opened|raised|reporting\s+this)\b.{0,30}\b(third|fourth|fifth|3rd|4th|5th|again\s+for\s+the)\b'
+    - '\b(third|fourth|fifth|3rd|4th|5th)\s+time\b.{0,30}\b(reporting|raising|this\s+(week|month)|same\s+(issue|problem))\b'
