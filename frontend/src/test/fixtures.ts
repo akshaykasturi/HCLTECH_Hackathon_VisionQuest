@@ -3,6 +3,7 @@ import type {
   AnalysisResult, ChainStatus, FeedbackRecord, HealthData, LoginData, Preset, ResultSummary, SavedResult, Taxonomy,
   TicketDetail, TicketSummary,
 } from "../lib/types";
+import type { HistoryRecordApi } from "../lib/api";
 
 export const HEALTH_OK: HealthData = { api: "up", database: "up", warmup: "ready", warmup_detail: "1 warm-up step(s) done" };
 export const HEALTH_WARMING: HealthData = { api: "up", database: "up", warmup: "warming", warmup_detail: "running get_index" };
@@ -111,4 +112,31 @@ export const TICKET_DETAIL: TicketDetail = {
   description: "VPN connects but drops every few minutes since the gateway change on Tuesday.",
   root_cause: "Gateway now requires ciphers that older clients do not offer during rekey", problem_id: "PRB-0040",
   resolution_text: "Root cause: gateway cipher change. Fix confirmed with the requester. Steps: Confirm the rekey failure in the gateway log | Upgrade the VPN client to the supported version",
+};
+
+// ---------- review history: raw backend records in the PROVISIONAL shape (lib/api.ts), test data only ----------
+export const HISTORY_RESOLVED: HistoryRecordApi = {
+  result_id: "4f1c2a9b7d3e4c11a2b3c4d5e6f70812", created_at: "2026-11-16T09:00:00+00:00",
+  recommended_at: "2026-11-16T09:00:03+00:00", user_id: "asha",
+  ticket_masked: { subject: "VPN drops every few minutes", description: "VPN disconnects since the gateway change. Contact [EMAIL].",
+                   affected_service: "Corporate VPN", environment: "production", channel: "portal" },
+  classification: RESULT_RECOMMEND.classification, evidence_ids: ["INC-100045", "doc:KB-004#4"],
+  outcome: "RECOMMEND", reasons: ["STRONG_MATCH"], confidence: 0.86, recommendation: RESULT_RECOMMEND.recommendation,
+  findings: [], generator: "template", model_version: "tfidf-v1", prompt_version: "v1",
+  feedback: [
+    { verdict: "useful", note_masked: "Step 1 fixed it", reviewer_id: "asha", target: "result", target_id: null,
+      created_at: "2026-11-16T09:10:00+00:00" },
+    { verdict: "incorrect", note_masked: null, reviewer_id: "ravi", target: "match", target_id: "INC-100777",
+      created_at: "2026-11-16T10:00:00+00:00" },
+  ],
+  resolution: { resolved_by: "asha", resolved_at: "2026-11-16T12:20:00+00:00" },
+};
+
+export const HISTORY_OPEN: HistoryRecordApi = {
+  ...HISTORY_RESOLVED, result_id: "res-clarify-0002", created_at: "2026-11-15T08:00:00+00:00", user_id: null,
+  ticket_masked: { subject: "Cannot log in", description: "It does not work." }, classification: null,
+  evidence_ids: [], outcome: "CLARIFY", reasons: ["LOW_CONFIDENCE"], confidence: 0.3, recommendation: null,
+  generator: null, model_version: null, prompt_version: null,
+  feedback: [{ verdict: "unresolved", note_masked: null, reviewer_id: null, target: "result", target_id: null, created_at: null }],
+  resolution: null,
 };
