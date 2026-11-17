@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { screen, within } from "@testing-library/react";
-import { fail, mockBackend, ok, renderApp } from "./utils";
+import { fail, mockBackend, ok, renderApp, signIn } from "./utils";
 import { CHAIN_BAD, CHAIN_OK, FEEDBACK_1, RESULT_1, RESULTS } from "./fixtures";
 
 function auditBackend(extra = {}) {
@@ -14,9 +14,11 @@ function auditBackend(extra = {}) {
 }
 
 describe("audit history", () => {
+  beforeEach(() => signIn());
+
   it("lists saved results newest first", async () => {
     auditBackend();
-    renderApp("/audit");
+    renderApp("/analyst/audit");
     expect(await screen.findByRole("button", { name: "r-2" })).toBeInTheDocument();
     const rows = screen.getAllByRole("button", { name: /^r-\d$/ }).map((b) => b.textContent);
     expect(rows).toEqual(["r-2", "r-1"]);
@@ -25,13 +27,13 @@ describe("audit history", () => {
 
   it("shows an empty state when nothing is saved", async () => {
     mockBackend();
-    renderApp("/audit");
+    renderApp("/analyst/audit");
     expect(await screen.findByText("No results saved yet")).toBeInTheDocument();
   });
 
   it("verifies the chain", async () => {
     const backend = auditBackend();
-    const { user } = renderApp("/audit");
+    const { user } = renderApp("/analyst/audit");
     await user.click(screen.getByRole("button", { name: "Verify chain" }));
     expect(await screen.findByText("Chain verified")).toBeInTheDocument();
     expect(screen.getByText("3 events checked, no gaps or edits found.")).toBeInTheDocument();
@@ -40,7 +42,7 @@ describe("audit history", () => {
 
   it("reports a broken chain", async () => {
     auditBackend({ "GET /api/audit/verify": ok(CHAIN_BAD) });
-    const { user } = renderApp("/audit");
+    const { user } = renderApp("/analyst/audit");
     await user.click(screen.getByRole("button", { name: "Verify chain" }));
     expect(await screen.findByText("Chain check failed")).toBeInTheDocument();
     expect(screen.getByText(/At event #2: hash does not match/)).toBeInTheDocument();
@@ -48,7 +50,7 @@ describe("audit history", () => {
 
   it("opens a result and its feedback from the list", async () => {
     auditBackend();
-    const { user } = renderApp("/audit");
+    const { user } = renderApp("/analyst/audit");
     await user.click(await screen.findByRole("button", { name: "r-1" }));
     const records = await screen.findByRole("list", { name: "Feedback records" });
     expect(within(records).getByText("confirm")).toBeInTheDocument();
@@ -58,7 +60,7 @@ describe("audit history", () => {
 
   it("validates the ID before calling the backend", async () => {
     const backend = auditBackend();
-    const { user } = renderApp("/audit");
+    const { user } = renderApp("/analyst/audit");
     await user.type(screen.getByLabelText("Result ID"), "bad id!");
     await user.click(screen.getByRole("button", { name: "Look up" }));
     expect(screen.getByText(/Enter a result ID/)).toBeInTheDocument();
@@ -67,7 +69,7 @@ describe("audit history", () => {
 
   it("shows a clear message for an unknown result", async () => {
     auditBackend({ "GET /api/audit/results/r-404": fail(404, "RESULT_NOT_FOUND", "No saved result has this ID.") });
-    const { user } = renderApp("/audit");
+    const { user } = renderApp("/analyst/audit");
     await user.type(screen.getByLabelText("Result ID"), "r-404");
     await user.click(screen.getByRole("button", { name: "Look up" }));
     expect(await screen.findByText("Result not found")).toBeInTheDocument();
@@ -75,7 +77,7 @@ describe("audit history", () => {
 
   it("never renders backend text as HTML", async () => {
     auditBackend({ "GET /api/audit/results": ok([{ ...RESULTS[0], summary: "<img src=x onerror=alert(1)>" }]) });
-    renderApp("/audit");
+    renderApp("/analyst/audit");
     expect(await screen.findByText("<img src=x onerror=alert(1)>")).toBeInTheDocument();
     expect(document.querySelector("img")).toBeNull();
   });

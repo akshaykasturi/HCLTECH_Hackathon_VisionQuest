@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError, assertHealth, assertResult, createApiClient, describeError, makeEndpoints } from "./api";
+import {
+  ApiError, assertAnalysis, assertHealth, assertLogin, assertResult, createApiClient, describeError, makeEndpoints,
+} from "./api";
 import { HEALTH_OK } from "../test/fixtures";
 
 function fetchReturning(status: number, body: string | object, headers: Record<string, string> = {}) {
@@ -51,7 +53,7 @@ describe("API client", () => {
     [404, "NOT_FOUND", "Not found"],
     [422, "VALIDATION_ERROR", "Invalid request"],
     [500, "INTERNAL_ERROR", "Server error"],
-    [503, "DATABASE_UNAVAILABLE", "Audit database unavailable"],
+    [503, "DATABASE_UNAVAILABLE", "Database unavailable"],
     [503, "WARMUP_FAILED", "Warm-up failed"],
   ])("maps HTTP %i %s to a clear message", async (status, code, title) => {
     const fetchImpl = fetchReturning(status, { ok: false, data: null, error: { code, message: "server text" } });
@@ -115,5 +117,60 @@ describe("API client", () => {
     const fetchImpl = fetchReturning(200, { ok: true, data: [], error: null });
     await makeEndpoints(createApiClient({ baseUrl: "", fetchImpl })).feedback("a/b");
     expect(fetchImpl.mock.calls[0][0]).toBe("/api/audit/results/a%2Fb/feedback");
+  });
+});
+
+describe("login token", () => {
+  it("sends the token as a Bearer header when there is one", async () => {
+    const fetchImpl = fetchReturning(200, { ok: true, data: null, error: null });
+    await createApiClient({ baseUrl: "", fetchImpl, getToken: () => "tok-1" }).request("/api/tickets/presets");
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-1");
+  });
+
+  it("sends no Authorization header when signed out", async () => {
+    const fetchImpl = fetchReturning(200, { ok: true, data: null, error: null });
+    await createApiClient({ baseUrl: "", fetchImpl, getToken: () => null }).request("/health");
+    const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+  });
+
+  it("reports a 401 on a request that carried a token", async () => {
+    const onUnauthorized = vi.fn();
+    const fetchImpl = fetchReturning(401, { ok: false, data: null, error: { code: "UNAUTHORIZED", message: "expired" } });
+    const err = await caught(createApiClient({ baseUrl: "", fetchImpl, getToken: () => "old", onUnauthorized })
+      .request("/api/tickets/analyze", { method: "POST", body: {} }));
+    expect(err.code).toBe("UNAUTHORIZED");
+    expect(onUnauthorized).toHaveBeenCalledOnce();
+  });
+
+  it("does not report a wrong password as an expired session", async () => {
+    const onUnauthorized = vi.fn();
+    const fetchImpl = fetchReturning(401, { ok: false, data: null, error: { code: "INVALID_LOGIN", message: "x" } });
+    await caught(createApiClient({ baseUrl: "", fetchImpl, getToken: () => null, onUnauthorized })
+      .request("/api/auth/login", { method: "POST", body: {} }));
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+});
+
+describe("ticket response checks", () => {
+  it("accepts a well-formed analysis and rejects unknown outcomes", () => {
+    const good = { result_id: "r", outcome: "CLARIFY", similar: [], kb: [], reasons: [], confidence: 0.4 };
+    expect(assertAnalysis(good).outcome).toBe("CLARIFY");
+    expect(() => assertAnalysis({ ...good, outcome: "MAYBE" })).toThrow(ApiError);
+    expect(() => assertAnalysis({ ...good, similar: null })).toThrow(ApiError);
+  });
+
+  it("rejects a login response without a token or a known role", () => {
+    const good = { token: "t", token_type: "bearer", expires_at: "2099-01-01T00:00:00Z", user: { username: "a", role: "lead" } };
+    expect(assertLogin(good).user.role).toBe("lead");
+    expect(() => assertLogin({ ...good, token: "" })).toThrow(ApiError);
+    expect(() => assertLogin({ ...good, user: { username: "a", role: "admin" } })).toThrow(ApiError);
+  });
+
+  it("gives friendly messages for the new backend error codes", () => {
+    expect(describeError(new ApiError("http", "DB_NOT_READY", "x", 503)).retryable).toBe(false);
+    expect(describeError(new ApiError("http", "INVALID_LOGIN", "x", 401)).title).toBe("Sign-in failed");
+    expect(describeError(new ApiError("http", "VALIDATION_ERROR", "subject: too short", 400)).title).toBe("Check the form");
   });
 });

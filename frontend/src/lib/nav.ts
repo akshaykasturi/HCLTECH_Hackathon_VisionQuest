@@ -1,21 +1,21 @@
-import { Activity, House, ScrollText } from "lucide-react";
-
-// Add tomorrow's pages here (and their routes in App.tsx).
-export const NAV_ITEMS = [
-  { to: "/", label: "Home", Icon: House, end: true },
-  { to: "/audit", label: "Audit History", Icon: ScrollText, end: false },
-  { to: "/system-health", label: "System Health", Icon: Activity, end: false },
-] as const;
+import { Activity, ScrollText, Sparkles } from "lucide-react";
 
 export const APP_NAME = "VisionQuest";
+export const ANALYST_HOME = "/analyst/analyze";
 
-/** Breadcrumb trail for a path (labels only; the last item is the current page). */
+// Analyst console pages (sidebar). Tickets, Review history and Dashboard are added here as they are built.
+export const NAV_ITEMS = [
+  { to: "/analyst/analyze", label: "Analyze", Icon: Sparkles, end: false },
+  { to: "/analyst/audit", label: "Audit History", Icon: ScrollText, end: false },
+  { to: "/analyst/system-health", label: "System Health", Icon: Activity, end: false },
+] as const;
+
+/** Breadcrumb trail for an analyst path (labels only; the last item is the current page). */
 export function breadcrumbs(pathname: string): { label: string; to?: string }[] {
-  const crumbs: { label: string; to?: string }[] = [{ label: APP_NAME, to: "/" }];
-  if (pathname === "/") return [...crumbs, { label: "Home" }];
-  const [first, second] = pathname.split("/").filter(Boolean);
-  const item = NAV_ITEMS.find((n) => n.to === `/${first}`);
+  const crumbs: { label: string; to?: string }[] = [{ label: "Analyst console", to: ANALYST_HOME }];
+  const [, page, detail] = pathname.split("/").filter(Boolean);
+  const item = NAV_ITEMS.find((n) => n.to === `/analyst/${page}`);
   if (!item) return [...crumbs, { label: "Not found" }];
-  if (second) return [...crumbs, { label: item.label, to: item.to }, { label: decodeURIComponent(second) }];
+  if (detail) return [...crumbs, { label: item.label, to: item.to }, { label: decodeURIComponent(detail) }];
   return [...crumbs, { label: item.label }];
 }
