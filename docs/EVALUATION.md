@@ -61,3 +61,34 @@ Can a metadata column predict priority on its own? Train purity = share of train
 
 No column beats the majority's val accuracy and none finds a single P1. affected_service: high purity on train, much lower accuracy on val. Rare values look pure by chance, and the purity does not carry over to unseen scenarios. Priority follows impact x urgency, which the text and these columns do not carry, so priority comes from a rule (TicketIn.impact, plus raising production outages to P1/P2), never from a confident ML label.
 <!-- clf-val:end -->
+
+<!-- mttr:start -->
+## MTTR: manual baseline (measured) and assisted (estimated)
+
+**Baseline, measured** from `created_at` to `resolved_at` on 980 resolved or closed tickets (skipped: not_resolved 120). The timestamps are simulated (no business hours or holidays), so these hours are illustrative. Mean: 95% bootstrap interval (2000 resamples, seed 0). SLA breached = resolved later than the priority's target (docs/DATA-CARD.md sla_target_hours: P1 4, P2 8, P3 24, P4 72).
+
+| Priority | Tickets | Mean h (95% CI) | Median h | P90 h | SLA target h | SLA breached |
+|---|---|---|---|---|---|---|
+| P1 | 125 | 4.7 (4.4-5.1) | 4.7 | 7.5 | 4 | 76 / 125 (60.8%) |
+| P2 | 344 | 19.7 (18.8-20.7) | 19.9 | 32.9 | 8 | 296 / 344 (86.1%) |
+| P3 | 398 | 53.5 (51.2-55.7) | 54.7 | 85.8 | 24 | 343 / 398 (86.2%) |
+| P4 | 113 | 114.4 (104.7-124.4) | 112.1 | 185.0 | 72 | 79 / 113 (69.9%) |
+| all | 980 | 42.4 (40.1-45.1) | 29.4 | 89.5 | per priority | 794 / 980 (81.0%) |
+
+The synthetic resolution timestamps were not generated to match the SLA targets, so the 81% breach rate is a property of the simulated data, not a finding about a real service desk. The breach column shows the method; in real use it would run on the organisation's own ITSM timestamps.
+
+**Assisted, estimated** (never observed: the assistant recommends, analysts resolve). For each analysed ticket, start from the baseline mean for its priority. A RECOMMEND rated useful saves `diagnosis_share` (0.30, range 0.15-0.45; source: our assumption, not measured: diagnosis/triage as a share of resolution time is 0.30; 0.15-0.45 is the sensitivity range shown with every estimate) x `useful_saving` (0.50) of it. A RECOMMEND rated incorrect costs 0.25 h of review. Everything else (unrated, unresolved, CLARIFY, ESCALATE, BLOCKED) saves nothing. The dashboard applies this to the real results and their latest feedback (`mttr.estimate_assisted`).
+
+What-if table (scenarios, not results): share of tickets that get a RECOMMEND x share of those rated useful (the rest counted as incorrect).
+
+| RECOMMEND share | Useful rate | Baseline mean h | Assisted mean h (range) | Saving % (range) |
+|---|---|---|---|---|
+| 50% | 50% | 42.4 | 40.9 (40.1-41.7) | 3.6 (1.7-5.5) |
+| 50% | 70% | 42.4 | 40.2 (39.1-41.4) | 5.2 (2.5-7.8) |
+| 50% | 90% | 42.4 | 39.6 (38.2-41.0) | 6.7 (3.3-10.1) |
+| 75% | 50% | 42.4 | 40.1 (39.0-41.3) | 5.4 (2.6-8.2) |
+| 75% | 70% | 42.4 | 39.1 (37.5-40.8) | 7.7 (3.8-11.7) |
+| 75% | 90% | 42.4 | 38.2 (36.0-40.3) | 10.1 (5.0-15.1) |
+
+The assumptions are ours, not measured. Report the assisted MTTR as an estimate with this range, and replace the scenarios with the real useful rate once analysts have reviewed results.
+<!-- mttr:end -->
