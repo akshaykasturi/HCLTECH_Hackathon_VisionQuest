@@ -59,7 +59,11 @@ export interface ChainStatus {
 
 // ---------- Auth: backend/app/auth/router.py ----------
 
-export type Role = "analyst" | "lead";
+/** Roles from backend/app/tickets/models.py, lowest first: employee < analyst < lead. */
+export type Role = "employee" | "analyst" | "lead";
+export const ROLES: readonly Role[] = ["employee", "analyst", "lead"];
+/** Roles that may use the analyst console (the backend enforces the same with require_role("analyst")). */
+export const STAFF_ROLES: readonly Role[] = ["analyst", "lead"];
 
 export interface User {
   username: string;
@@ -200,6 +204,42 @@ export interface Taxonomy {
   affected_service: string[];
   environment: string[];
   subcategory: Record<string, string[]>;
+}
+
+/** GET /api/tickets item (LIST_FIELDS in backend/app/api/tickets.py). score and match only when searching with q. */
+export interface TicketSummary {
+  ticket_id: string;
+  created_at: string | null;
+  status: string | null;
+  category: string | null;
+  subcategory: string | null;
+  priority: string | null;
+  assigned_team: string | null;
+  affected_service: string | null;
+  environment: string | null;
+  subject: string | null;
+  score?: number;
+  match?: MatchLabel;
+}
+
+/** GET /api/tickets/{ticket_id} data (DETAIL_FIELDS + resolution_text). Text is masked by the backend. */
+export interface TicketDetail extends TicketSummary {
+  resolved_at: string | null;
+  channel: string | null;
+  description: string | null;
+  root_cause: string | null;
+  problem_id: string | null;
+  resolution_text: string | null;
+}
+
+/** GET /api/tickets query parameters (TicketFilters). Only set values are sent. */
+export interface TicketQuery {
+  q?: string;
+  affected_service?: string;
+  category?: string;
+  subcategory?: string;
+  priority?: string;
+  status?: string;
 }
 
 /** POST /api/tickets/results/{result_id}/feedback body (FeedbackIn). */

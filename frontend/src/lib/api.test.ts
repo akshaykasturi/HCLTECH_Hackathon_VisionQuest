@@ -164,6 +164,9 @@ describe("ticket response checks", () => {
   it("rejects a login response without a token or a known role", () => {
     const good = { token: "t", token_type: "bearer", expires_at: "2099-01-01T00:00:00Z", user: { username: "a", role: "lead" } };
     expect(assertLogin(good).user.role).toBe("lead");
+    // employee is a valid backend role (models.Role): not a malformed response
+    expect(assertLogin({ ...good, user: { username: "e", role: "employee" } }).user.role).toBe("employee");
+    expect(assertLogin({ ...good, user: { username: "a", role: "analyst" } }).user.role).toBe("analyst");
     expect(() => assertLogin({ ...good, token: "" })).toThrow(ApiError);
     expect(() => assertLogin({ ...good, user: { username: "a", role: "admin" } })).toThrow(ApiError);
   });
