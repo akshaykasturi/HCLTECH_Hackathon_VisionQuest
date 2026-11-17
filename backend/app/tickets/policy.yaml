@@ -1,0 +1,10 @@
+# Ticket assistant policy: numbers the code decides with, kept out of the code so they can be tuned.
+# Thresholds are placeholders until tuned on the val split (never on test).
+
+similar:
+  index_fields: [subject, description, affected_service]   # what a past ticket is searched by
+  k: 5                      # how many similar tickets to return
+  rrf_k: 60                 # reciprocal rank fusion constant: 1 / (rrf_k + rank)
+  service_bonus: 0.008      # added to the fused score (RRF units) when affected_service matches
+  dup_threshold: 0.85       # score >= this -> likely_duplicate
+  related_threshold: 0.70   # score >= this -> related, else weak
