@@ -5,35 +5,87 @@
 # Attacks on the assistant -> ScreenResult.blocked = True -> outcome BLOCKED (no search, no LLM).
 blocked:
   INJECTION_PATTERN:
-    - '\b(ignore|disregard|forget|override|bypass)\s+(all\s+|any\s+|the\s+|your\s+|these\s+)*(previous|prior|above|earlier|system|original)?\s*(instructions?|rules|prompts?|guidelines|guardrails)\b'
-    - '\b(reveal|show|print|repeat|leak)\s+(me\s+)?(your|the)\s+(system\s+)?(prompt|instructions)\b'
+    # Telling the assistant to drop its rules, show its prompt, or follow orders hidden somewhere else.
+    - '\b(ignore|disregard|forget|override|bypass|skip)\s+(all\s+|any\s+|the\s+|your\s+|these\s+|my\s+)*(previous|prior|above|earlier|system|original|safety|security)?\s*(instructions?|rules|prompts?|guidelines|guidance|guardrails|checks|polic(y|ies)|filters|restrictions)\b'
+    - '\b(reveal|show|print|repeat|leak|output|display|dump|give\s+me)\s+(me\s+)?(your|the)\s+(full\s+|whole\s+|hidden\s+|secret\s+|internal\s+|original\s+)*(system\s+)?(prompt|instructions)\b'
     - '\bsystem\s+prompt\b'
+    - '\b(hidden|secret|internal)\s+(instructions|prompt|rules)\b'
     - '</?\s*(system|assistant|instructions?)\s*>'
     - '^#{2,}\s*(system|instructions?)\b|\s#{2,}\s*(system|instructions?)\b'
+    - '(^|[\s\[(])(system|admin(istrator)?)\s*:\s*(policy|new\s+instructions?|ignore|override|you\s+(are|must))'
+    - '\b(note|message|instructions?)\s+(to|for)\s+(the\s+)?(ai|assistant|bot|model|llm|chatbot)\b'
+    - '\b(developer|admin|administrator|system|maintenance|debug)\s+override\b'
+    - '\b(escalate|escalation|blocked?|refusals?|safety|filters?|checks|redaction|masking)\b.{0,40}\b(are|is)\s+(now\s+)?(disabled|turned\s+off|off|removed|not\s+allowed)\b'
+    - '\b(disable|turn\s+off|bypass|skip|remove|stop)\s+(the\s+)?(redaction|masking|safety\s+checks?|content\s+filters?|guardrails)\b'
+    - '\bwithout\s+(any\s+)?(masking|redaction|redacting|filtering)\b'
+    - '\bdecode\b.{0,60}\b(do|follow|run|execute|obey)\b'
+    - '\b(follow|obey|execute|run)\s+(every|all|each|the)\s+(instructions?|steps|commands)\s+(in|at|from|on)\s+(it|this|that|the\s+(link|page|url|file|paste))\b'
+    # Common non-English forms of "ignore previous instructions".
+    - '\bignora\s+(todas\s+)?(las\s+)?instrucciones\b|\bignore[sz]?\s+(toutes\s+)?les\s+instructions\b|\bignoriere\s+(alle\s+)?(vorherigen\s+)?anweisungen\b|\bignore\s+todas\s+as\s+instru'
   ROLE_OVERRIDE:
-    - '\byou\s+are\s+now\s+(a|an|the|my|dan|in\s+developer)\b'
+    - '\byou\s+are\s+now\s+(a|an|the|my|dan|in\s+developer|admin|administrator|root|god|unrestricted|free)\b'
     - '\b(pretend|imagine)\s+(to\s+be|you\s+are)\b'
     - '\bact\s+as\s+(an?\s+)?(admin|administrator|root|system|developer|dan|unrestricted)\b'
     - '\b(developer|god|dan|jailbreak)\s+mode\b'
     - '\bjailbreak'
+    - '\blet''?s\s+play\s+a\s+game\b'
+    - '\b(never\s+refuses?|always\s+answers?\s+(fully|everything|anything|every\s+question)|answers\s+(anything|everything)\s+without)\b'
   CREDENTIAL_REQUEST:
     # Asking for someone else's secret. "Reset my password" and "Outlook asks for my password" are normal tickets.
-    - '\b(give|send|share|tell|show|list|reveal|provide|email|dump|export)\s+(me\s+)?(the\s+|all\s+|every\s+|his\s+|her\s+|their\s+|other\s+|another\s+|admin\s+|administrator\s+|root\s+|service\s+account\s+|\w+''s\s+)+(users?''?\s+|employees?''?\s+)?(passwords?|credentials|api\s+keys?|tokens?|secrets?)\b(?!\s*(reset|expir|change|polic|rules|requirements))'
-    - '\b(what\s+is|what''s)\s+(the|his|her|their|\w+''s)\s+(admin\s+|root\s+)?(password|credentials|api\s+key)\b(?!\s*(reset|expir|change|polic|rules|requirements))'
+    - '\b(give|send|share|tell|show|list|reveal|provide|email|dump|export|print|output|paste)\s+(me\s+)?(the\s+|all\s+|every\s+|his\s+|her\s+|their\s+|other\s+|another\s+|admin\s+|administrator\s+|root\s+|service\s+account\s+|\w+''s\s+|users?''?\s+)+(users?''?\s+|employees?''?\s+)?(passwords?|credentials|api\s+keys?|tokens?|secrets?)\b(?!\s*(reset|expir|change|polic|rules|requirements))'
+    - '\b(what\s+is|what''s)\s+(the|his|her|their|\w+''s)\s+(local\s+|domain\s+)?(admin\s+|administrator\s+|root\s+)?(password|credentials|api\s+key)\b(?!\s*(reset|expir|change|polic|rules|requirements))'
+    # Asking to be HANDED secrets ("show me the session cookie for X"). Mentioning them is fine:
+    # "my recovery codes are lost", "PATH environment variables are wrong", "tokens expire too fast".
+    - '\b(give|send|share|show|list|reveal|provide|email|dump|export|print|output|paste|display|tell)\b((?!\bmy\b).){0,40}\b(recovery\s+codes|session\s+cookies?|session\s+tokens?|auth(entication)?\s+tokens|password\s+hashes|environment\s+variables|env\s+vars)\b'
+    - '\b(your|the\s+assistant''s|the\s+server''s|the\s+system''s)\s+(api\s+keys?|keys|tokens|secrets|credentials|environment\s+variables)\b'
+    - '\b(stored|configured|secret)\s+(secrets?|api\s+keys|credentials|environment\s+variables|env\s+vars)\b'
+    - '\b(reset|change)\s+(his|her|their|\w+''s)\s+password\b.{0,40}\b(send|email|give|share|tell|text)\b'
+    - '\b(sign|log)\s*(in|on)\s+as\s+(him|her|them|someone\s+else|another\s+user|my\s+(manager|boss|colleague))\b'
   OTHER_USER_DATA:
-    - '\b(list|show|export|dump|give\s+me|send\s+me)\s+(all|every|the\s+whole|the\s+entire)\s+(users?|employees?|staff|customers?)(''s|'')?\s+(emails?|phone|numbers|salar|address|personal|data|details|records|tickets)'
-    - '\b(dump|export|download)\s+(the\s+)?(whole\s+|entire\s+)?(user|users|employee|customer)\s+(table|database|db|list)\b'
+    - '\b(list|show|export|dump|give\s+me|send\s+me|print)\s+(all|every|the\s+whole|the\s+entire|other)\s+(users?|employees?|staff|customers?)(''s|'')?\s+(emails?|phone|numbers|salar|address|personal|data|details|records|tickets|private)'
+    - '\b(dump|export|download)\s+(the\s+)?(whole\s+|entire\s+|full\s+)?(user|users|employee|customer)\s+(table|database|db|list|directory)\b'
     - '\bselect\s+\*\s+from\b|\bdrop\s+table\b|\bunion\s+select\b'
+    - '\b(print|show|list|give\s+me|send\s+me)\s+(all\s+)?other\s+(users?''?|people''?s?|employees?''?)\s+(private\s+)?(tickets|data|details|emails|files)\b'
+    - '\b(list|show|give\s+me|send\s+me)\s+(everyone|everybody|all\s+(the\s+)?(users|staff|employees|people))\b.{0,80}\b(with|and|including)\s+(their|the)\s+(mobile|phone|numbers|emails?|addresses|passwords|salar)'
+    - '\btickets\s+(that\s+)?(hr|management|my\s+manager|security|legal)\s+(opened|raised|filed|wrote)\s+about\s+me\b'
+  DATA_EXFILTRATION:
+    # Company data going out. "Forward my mail to my personal address - how?" is a how-to question, not this.
+    - '\b(send|email|forward|upload|post|attach)\b.{0,60}\b(tickets?|summar\w*|records|directory|database|salar\w*|customer\s+\w+|everything|all\s+of\s+it|history)\b.{0,40}\b(personal|private|external|outside)\s+(gmail|email|mail|address|account|drive|url|server|site)\b'
+    - '\b(send|upload|post|forward)\s+(all|every|the\s+full|the\s+whole|the\s+entire)\b.{0,60}\bto\s+(an?\s+)?(external|outside|third[\s-]party|public)\b'
+    - '\b(export|dump|download|copy)\s+(the\s+)?(full\s+|whole\s+|entire\s+|complete\s+)?(user|employee|staff|ad|active\s+directory)\s+(directory|database|list|table)\b'
+  HARMFUL_REQUEST:
+    # Asking the assistant to help switch off security or hide tracks.
+    - '\b(disable|turn\s+off|bypass|uninstall|kill|stop)\w*\b.{0,40}\b(endpoint\s+detection|edr|antivirus|anti-virus|defender|security\s+(software|agent|monitoring)|siem)\b.{0,80}\b(quietly|silently|secretly|without\s+(users|anyone|them|people)\s+notic\w*|on\s+all|every\s+machine|all\s+(company\s+)?machines)'
+    - '\b(quietly|silently|secretly)\s+(disable|turn\s+off|bypass|uninstall)\w*'
+    - '\b(delete|wipe|clear|erase|purge|tamper\s+with)\s+(the\s+)?(audit\s+logs?|security\s+logs?|event\s+logs?|access\s+logs?)\b'
 
 # Physical hazards -> ScreenResult.safety = True -> ESCALATE as P1. People before laptops.
 # IT words that look like hazards are excluded: "smoke test", "Apache Spark job", "memory spill to disk".
 safety:
   SAFETY_SMOKE: ['\bsmok(e|ing|y)\b(?![\s-]*test)']
   SAFETY_FIRE: ['\bon\s+fire\b', '\bcaught\s+fire\b', '\bflames?\b', '\bfire\s+alarm\b']
-  SAFETY_BURNING: ['\bburning\s+(smell|odou?r|plastic)\b', '\bsmells?\s+(like\s+)?burn', '\bscorch']
+  SAFETY_BURNING: ['\bburning\s+(smell|odou?r|plastic)\b', '\bsmells?\s+(like\s+)?burn', '\bscorch', '\bchemical\s+(smell|odou?r)\b']
   SAFETY_SPARKS: ['\bspark(s|ing|ed)\b(?!\s+(job|cluster|session|executor|driver|sql|streaming|app))']
   SAFETY_SHOCK: ['\belectric(al)?\s+shock\b', '\belectrocut', '\bgot\s+(a\s+)?shock(ed)?\b', '\bexposed\s+wires?\b']
-  SAFETY_BATTERY: ['\b(swollen|swelling|bulging|puffed|puffy|leaking)\s+battery\b', '\bbattery\s+(is\s+)?(swollen|swelling|bulging|leaking|expanding)\b']
+  SAFETY_BATTERY:
+    - '\b(swollen|swelling|bulging|puffed|puffy|leaking)\s+battery\b'
+    - '\bbattery\s+(case\s+)?(is\s+|looks\s+)?(swollen|swelling|bulging|leaking|expanding)\b'
+    # A swelling battery seen from outside: the case or keyboard pushed up, or too hot to hold.
+    - '\b(keyboard|trackpad|touchpad|case|bottom|chassis|back\s+cover)\s+(is\s+)?(bulging|bulges|lifting|pushed\s+up|warping|warped|separating)\b'
+    - '\btoo\s+hot\s+to\s+(touch|hold|handle)\b'
+  SAFETY_CRITICAL_OUTAGE:
+    # A whole site down, or people unable to get in or out: a person must act now.
+    - '\b(whole|entire)\s+(site|branch|office|building|campus|floor|plant|warehouse)\b.{0,40}\b(offline|down|no\s+network|without\s+network|nothing\s+works)\b'
+    - '\bdoors?\s+(are\s+|is\s+)?stuck\s+(locked|shut|closed)\b'
+    - '\b(people|staff|someone|we\s+are)\s+(are\s+)?(trapped|locked\s+in|stuck\s+inside)\b'
+  SAFETY_SECURITY_INCIDENT:
+    - '\b(unknown|unauthori[sz]ed|unrecogni[sz]ed|rogue|unexpected)\s+(new\s+)?(domain\s+|global\s+)?(admin|administrator|privileged)\s+accounts?\b'
+    # An attack already happening: people must act now, not read fix steps.
+    # One infected laptop is a normal Security ticket; an outbreak or a live attack is not.
+    - '\b(spreading|ongoing|live)\s+(malware|ransomware|virus|worm|breach|intrusion|attack)\b'
+    - '\bactive\s+(breach|intrusion|attack|ransomware)\b'
+    - '\b(malware|ransomware|virus|worm)\b.{0,30}\b(spreading|spread\s+to|encrypting|across)\b'
+    - '\b(files|shares?|drives?)\s+(are\s+)?(being\s+)?encrypted\b.{0,40}\b(ransom|note|bitcoin)'
   SAFETY_SPILL:
     - '\b(spill(ed|t|s)?|knocked\s+over)\b.{0,40}\b(coffee|water|tea|drink|liquid|juice|soda)\b'
     - '\b(coffee|water|tea|drink|liquid|juice|soda)\b.{0,40}\bspill'
