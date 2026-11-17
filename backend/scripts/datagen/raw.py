@@ -16,7 +16,14 @@ from __future__ import annotations
 import html
 import random
 import re
+import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # backend/, so app.ingest is importable
+from app.ingest.contract import (CATEGORY_ALIASES, CHANNEL_ALIASES, ENV_ALIASES, LEVEL, MATRIX,  # noqa: E402,F401
+                                 PRIORITY_ALIASES, STATUS_ALIASES, SUBCATEGORY_ALIASES, TEAM_ALIASES, TS_CONVENTION)
+from app.ingest.normalize import canon, clean_text, parse_ts  # noqa: E402,F401
 
 RAW_SEED = 20261118
 
@@ -31,63 +38,8 @@ CLEAN_COLUMNS = ["source_record_id", "curated_ticket_id", "ingestion_action", "l
                  "resolution_notes", "resolution_steps", "problem_id", "dup_group_id", "split"]
 MANIFEST_COLUMNS = ["defect_id", "source_record_id", "field", "defect_type", "recoverable", "handling", "note"]
 
-# ---- documented normalisation contract ---------------------------------------------------------
-PRIORITY_ALIASES = {
-    "P1": ["P1", "p1", "1", "1 - Critical", "Critical", "CRITICAL", "Sev-1", "SEV1", "Sev 1", "Urgent"],
-    "P2": ["P2", "p2", "2", "2 - High", "High", "HIGH", "Sev-2", "SEV2"],
-    "P3": ["P3", "p3", "3", "3 - Moderate", "Medium", "Moderate", "Sev-3", "Normal"],
-    "P4": ["P4", "p4", "4", "4 - Low", "Low", "low", "Sev-4", "Planning"],
-}
-STATUS_ALIASES = {
-    "open": ["open", "Open", "New", "NEW", "Logged"],
-    "in_progress": ["in_progress", "In Progress", "WIP", "Work in Progress", "Assigned"],
-    "resolved": ["resolved", "Resolved", "RESOLVED", "Fixed", "Resolved - Fixed"],
-    "closed": ["closed", "Closed", "Closed - Complete", "CLOSED", "Done"],
-}
-CHANNEL_ALIASES = {
-    "portal": ["portal", "Self-Service Portal", "web", "Web Form"],
-    "email": ["email", "E-mail", "Email", "mail"],
-    "chat": ["chat", "Teams Chat", "Live Chat"],
-    "phone": ["phone", "Phone", "Tel", "Call"],
-    "monitoring": ["monitoring", "Monitoring", "Auto-Alert", "event"],
-}
-ENV_ALIASES = {
-    "production": ["production", "prod", "PROD", "Prd", "Production"],
-    "staging": ["staging", "stg", "STAGE", "Staging"],
-    "development": ["development", "dev", "DEV", "Dev"],
-}
-CATEGORY_ALIASES = {
-    "Identity & Access": ["IAM", "Identity and Access", "identity & access", "IDENTITY & ACCESS", "Id & Access"],
-    "Network": ["network", "NETWORK", "Netwrk", "Networking"],
-    "Collaboration": ["collab", "Collaboration Tools", "COLLABORATION"],
-    "Endpoint": ["endpoint", "End User Computing", "EUC", "ENDPOINT"],
-    "Cloud": ["cloud", "CLOUD", "Cloud Services"],
-    "Database": ["DB", "database", "Databases"],
-    "Business Applications": ["Business Apps", "bus. apps", "BUSINESS APPLICATIONS"],
-    "Security": ["security", "SecOps", "Infosec"],
-    "Infrastructure": ["infra", "Infrastructure Services", "INFRA"],
-}
-SUBCATEGORY_ALIASES = {"Wi-Fi": ["wifi", "WiFi", "Wireless"], "MFA": ["mfa", "2FA", "Multi-factor"],
-                       "Account Lockout": ["lockout", "Acct Lockout"], "Email Delivery": ["mail delivery", "E-mail"],
-                       "Software Installation": ["SW Install", "software install"], "Service Outage": ["Outage"]}
-TEAM_ALIASES = {"Network Operations": ["NetOps", "Network Ops"], "Site Reliability": ["SRE"],
-                "Security Operations": ["SOC", "SecOps Team"], "Service Desk": ["Helpdesk", "SD L1"],
-                "Database Operations": ["DBA Team", "DB Ops"], "Identity Operations": ["IdOps"],
-                "IAM Engineering": ["IAM Eng"], "Endpoint Support": ["EUC Support"], "Workplace IT": ["Deskside"],
-                "Messaging Operations": ["Messaging Ops"], "Collaboration Support": ["Collab Support"],
-                "Cloud Platform": ["Cloud Ops"], "ERP Support": ["SAP Support"], "CRM Support": ["Salesforce Support"],
-                "Platform Operations": ["Platform Ops"], "Observability": ["Monitoring Team"]}
-# Source timestamp conventions (how to parse each system's export).
-TS_CONVENTION = {
-    "ServiceNow-EMEA": "YYYY-MM-DD HH:MM:SS, UTC, no zone written",
-    "Jira-SM": "ISO 8601 with milliseconds and numeric offset, e.g. 2026-06-10T21:15:00.000+0530",
-    "Email-Gateway": "RFC 2822 with the sender's numeric offset, e.g. Wed, 10 Jun 2026 10:45:00 -0500",
-    "Monitoring-Bridge": "Unix epoch seconds (UTC)",
-    "Legacy-Remedy": "US MM/DD/YYYY hh:mm:ss AM/PM at fixed UTC-06:00 (no DST)",
-}
+# ---- documented normalisation contract: app/ingest/contract.py (shared with the ingestion pipeline) ----
 SLA_HOURS = {"P1": 4, "P2": 8, "P3": 24, "P4": 72}
-MATRIX = {"P1": [(1, 1)], "P2": [(1, 2), (2, 1)], "P3": [(2, 2), (1, 3), (3, 1)], "P4": [(2, 3), (3, 2), (3, 3)]}
-LEVEL = {1: "1 - High", 2: "2 - Medium", 3: "3 - Low"}
 ABBREV = {"password": "pwd", "account": "acct", "cannot": "cant", "users": "usrs", "please": "pls",
           "application": "app", "database": "db", "with": "w/", "because": "b/c", "message": "msg",
           "connection": "conn", "error": "err", "server": "svr", "certificate": "cert", "configuration": "config"}
@@ -114,51 +66,6 @@ def fmt_ts(dt: datetime | None, system: str) -> str:
     if system == "Legacy-Remedy":
         return dt.astimezone(timezone(timedelta(hours=-6))).strftime("%m/%d/%Y %I:%M:%S %p")
     raise ValueError(system)
-
-
-def parse_ts(value: str, system: str) -> datetime | None:
-    """Reference parser for the conventions above (used by the validator; None = unparseable)."""
-    v = (value or "").strip()
-    if not v:
-        return None
-    try:
-        if system == "ServiceNow-EMEA":
-            return datetime.strptime(v, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-        if system == "Jira-SM":
-            return datetime.strptime(v, "%Y-%m-%dT%H:%M:%S.%f%z").astimezone(timezone.utc)
-        if system == "Email-Gateway":
-            return datetime.strptime(v, "%a, %d %b %Y %H:%M:%S %z").astimezone(timezone.utc)
-        if system == "Monitoring-Bridge":
-            return datetime.fromtimestamp(int(v), tz=timezone.utc)
-        if system == "Legacy-Remedy":
-            return datetime.strptime(v, "%m/%d/%Y %I:%M:%S %p").replace(tzinfo=timezone(timedelta(hours=-6))) \
-                .astimezone(timezone.utc)
-    except ValueError:
-        return None
-    return None
-
-
-def canon(value: str, table: dict[str, list[str]]) -> str | None:
-    v = (value or "").strip()
-    for k, aliases in table.items():
-        if v.lower() == k.lower() or v in aliases or v.lower() in (a.lower() for a in aliases):
-            return k
-    return None
-
-
-def clean_text(value: str) -> str:
-    """Reference cleaner for recoverable text noise: mojibake, HTML, entities, whitespace."""
-    v = value or ""
-    if "â€" in v or "Ã" in v:
-        try:
-            v = v.encode("cp1252").decode("utf-8")
-        except (UnicodeEncodeError, UnicodeDecodeError):
-            pass
-    v = v.replace("’", "'").replace("–", "-")
-    v = re.sub(r"<br\s*/?>", " ", v, flags=re.I)
-    v = re.sub(r"</?(p|div|span|b|i|font)[^>]*>", " ", v, flags=re.I)
-    v = html.unescape(v).replace("\xa0", " ")
-    return " ".join(v.split())
 
 
 # ---- helpers ------------------------------------------------------------------------------------
