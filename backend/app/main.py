@@ -39,6 +39,8 @@ from app.common import audit
 from app.common.api import ApiError, audit_router, error_response, is_valid_request_id, ok
 from app.common.env import load_dotenv
 from app.common.redact import mask
+from app.common.trace import optional
+from app.tickets.similar import get_ticket_index
 
 logger = logging.getLogger("app.main")
 REQUEST_ID_HEADER = "X-Request-ID"
@@ -49,7 +51,10 @@ _HTTP_CODES = {400: "BAD_REQUEST", 401: "UNAUTHORIZED", 403: "FORBIDDEN", 404: "
                429: "TOO_MANY_REQUESTS"}
 
 # Functions run once at startup, in order, in a background thread. Add yours here (see the docstring).
-WARMUPS: list[Callable[[], object]] = []
+WARMUPS: list[Callable[[], object]] = [get_ticket_index]
+# Teammates' warm-ups, added only once their module exists.
+WARMUPS += [fn for fn in (optional("app.tickets.classify", "load_classifier"),
+                          optional("app.tickets.kb", "get_kb_index")) if fn is not None]
 
 
 def cors_origins() -> list[str]:

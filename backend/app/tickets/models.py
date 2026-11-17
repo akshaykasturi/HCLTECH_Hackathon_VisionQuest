@@ -136,6 +136,7 @@ class AnalysisResult(BaseModel):
     reasons: list[str] = Field(default_factory=list)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     question: Optional[str] = None
+    escalation_group: Optional[str] = None                    # who takes it when outcome is ESCALATE
     recommendation: Optional[Recommendation] = None
     findings: list[Finding] = Field(default_factory=list)
     timings_ms: dict[str, float] = Field(default_factory=dict)
