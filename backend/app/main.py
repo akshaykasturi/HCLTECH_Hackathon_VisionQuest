@@ -35,6 +35,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.auth.router import router as auth_router
 from app.common import audit
 from app.common.api import ApiError, audit_router, error_response, is_valid_request_id, ok
 from app.common.env import load_dotenv
@@ -213,6 +214,7 @@ def create_app(audit_db_path: Optional[Path] = None, warmups: Optional[list[Call
 
     app.include_router(audit_router)
     app.include_router(tickets_router)
+    app.include_router(auth_router)
     return app
 
 
