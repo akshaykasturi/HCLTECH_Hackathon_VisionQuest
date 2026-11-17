@@ -39,6 +39,7 @@ from app.common import audit
 from app.common.api import ApiError, audit_router, error_response, is_valid_request_id, ok
 from app.common.env import load_dotenv
 from app.common.redact import mask
+from app.api.tickets import router as tickets_router
 from app.common.trace import optional
 from app.tickets.similar import get_ticket_index
 
@@ -211,6 +212,7 @@ def create_app(audit_db_path: Optional[Path] = None, warmups: Optional[list[Call
         return ok(current)
 
     app.include_router(audit_router)
+    app.include_router(tickets_router)
     return app
 
 
