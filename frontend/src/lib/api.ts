@@ -331,10 +331,9 @@ export function assertHistory(data: unknown): HistoryEntry[] {
 }
 
 // ---------- Dashboard adapter: GET /api/tickets/stats (role lead) ----------
-// PROVISIONAL CONTRACT. db/repo.stats() (Raswanth) and tickets/mttr.py (Akhilesh: baseline_mttr,
-// estimate_assisted) are not merged; until they are, the route answers 503 DB_NOT_READY. StatsApi is our
-// proposal from docs/ARCHITECTURE.md ("outcome mix, useful rate per category, MTTR baseline vs assisted") and
-// docs/PLAN.md. Backend field names stay in this block: change StatsApi and toDashboardStats() only.
+// PROVISIONAL CONTRACT, written down in docs/DASHBOARD-CONTRACT.md. db/repo.stats() (Raswanth) and
+// tickets/mttr.py (Akhilesh: baseline_mttr, estimate_assisted) are not merged; until they are, the route answers
+// 503 DB_NOT_READY. Backend field names stay in this block: change StatsApi and toDashboardStats() only.
 
 export interface StatsApi {
   total_results: number;
@@ -342,15 +341,32 @@ export interface StatsApi {
   outcome_counts: Partial<Record<string, number>>;
   /** Latest analyst verdict counts per category. */
   feedback_by_category?: { category: string; useful?: number; incorrect?: number; unresolved?: number }[] | null;
+  /** Historical incidents (ticket data, no database needed). */
+  incidents?: { total: number; resolved: number; pending: number; critical: number } | null;
+  by_priority?: { priority: string; count: number }[] | null;
+  by_service?: { service: string; count: number }[] | null;
+  by_category?: { category: string; count: number }[] | null;
   /** baseline_mttr(tickets): measured from historical timestamps. */
   mttr_baseline?: { median_hours: number; mean_hours?: number | null; tickets: number;
-                    by_priority?: { priority: string; median_hours: number; tickets: number }[] | null } | null;
+                    by_priority?: { priority: string; median_hours: number; tickets: number }[] | null;
+                    by_service?: { service: string; median_hours: number; tickets: number }[] | null;
+                    trend?: { month: string; median_hours: number; resolved: number }[] | null } | null;
   /** estimate_assisted(results, assumptions): an estimate, never observed. */
   mttr_assisted?: { median_hours: number; assumptions?: string[] | null } | null;
 }
 
 const isCount = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
 const isHours = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** [{<nameKey>: "...", count: n}] -> CountRow[]; null/undefined -> []; anything else is malformed. */
+function countRows(value: unknown, nameKey: string, what: string): { label: string; count: number }[] {
+  return optList<unknown>(value, isRecord, what).map((row) => {
+    const r = row as Record<string, unknown>;
+    if (typeof r[nameKey] !== "string" || !r[nameKey] || !isCount(r.count)) invalid(what);
+    return { label: r[nameKey] as string, count: r.count as number };
+  });
+}
 
 /** The adapter: the backend stats record -> DashboardStats. Throws INVALID_RESPONSE for malformed data. */
 export function toDashboardStats(raw: unknown): DashboardStats {
@@ -383,8 +399,21 @@ export function toDashboardStats(raw: unknown): DashboardStats {
       if (typeof r.priority !== "string" || !isHours(r.median_hours) || !isCount(r.tickets)) invalid("MTTR by priority");
       return { priority: r.priority, medianHours: r.median_hours, tickets: r.tickets };
     });
+    const byService = optList<unknown>(b.by_service, isRecord, "MTTR by service").map((row) => {
+      const r = row as Record<string, unknown>;
+      if (typeof r.service !== "string" || !isHours(r.median_hours) || !isCount(r.tickets)) invalid("MTTR by service");
+      return { service: r.service, medianHours: r.median_hours, tickets: r.tickets };
+    });
+    const trend = optList<unknown>(b.trend, isRecord, "MTTR trend").map((row) => {
+      const r = row as Record<string, unknown>;
+      if (typeof r.month !== "string" || !MONTH.test(r.month) || !isHours(r.median_hours) || !isCount(r.resolved)) {
+        invalid("MTTR trend");
+      }
+      return { month: r.month, medianHours: r.median_hours, resolved: r.resolved };
+    });
+    for (let i = 1; i < trend.length; i++) if (trend[i].month <= trend[i - 1].month) invalid("MTTR trend order");
     mttrBaseline = { medianHours: b.median_hours, meanHours: isHours(b.mean_hours) ? b.mean_hours : null,
-                     tickets: b.tickets, byPriority };
+                     tickets: b.tickets, byPriority, byService, trend };
   }
 
   let mttrAssisted: DashboardStats["mttrAssisted"] = null;
@@ -397,7 +426,29 @@ export function toDashboardStats(raw: unknown): DashboardStats {
     mttrAssisted = { medianHours: a.median_hours, assumptions };
   }
 
-  return { analyses: raw.total_results, outcomes, categories, mttrBaseline, mttrAssisted };
+  let incidents: DashboardStats["incidents"] = null;
+  const inc = raw.incidents;
+  if (inc !== null && inc !== undefined) {
+    if (!isRecord(inc) || ![inc.total, inc.resolved, inc.pending, inc.critical].every(isCount)) invalid("incident counts");
+    const [total, resolved, pending, critical] = [inc.total, inc.resolved, inc.pending, inc.critical] as number[];
+    if (resolved + pending > total || critical > total) invalid("incident counts");
+    incidents = { total, resolved, pending, critical };
+  }
+
+  // Derived from the two medians, so it is an ESTIMATE like the assisted figure itself.
+  const timeSaved = mttrBaseline && mttrAssisted
+    ? { hours: mttrBaseline.medianHours - mttrAssisted.medianHours,
+        percent: mttrBaseline.medianHours > 0
+          ? (mttrBaseline.medianHours - mttrAssisted.medianHours) / mttrBaseline.medianHours : null }
+    : null;
+
+  return {
+    analyses: raw.total_results, outcomes, categories, incidents,
+    byPriority: countRows(raw.by_priority, "priority", "priority distribution"),
+    byService: countRows(raw.by_service, "service", "service distribution"),
+    byCategory: countRows(raw.by_category, "category", "category distribution"),
+    mttrBaseline, mttrAssisted, timeSaved,
+  };
 }
 
 /** "?q=vpn&priority=P1" from the set values only (empty strings are left out). */

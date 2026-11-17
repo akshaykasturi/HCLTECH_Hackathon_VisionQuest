@@ -66,7 +66,6 @@ describe("dashboard content", () => {
     expect(tile("Rated useful")).toHaveTextContent("71%");          // 22 useful of 31 ratings
     expect(tile("Rated useful")).toHaveTextContent("22 of 31 analyst ratings");
     expect(tile("Median time to resolve")).toHaveTextContent("18.5 h");
-    expect(tile("Median time to resolve")).toHaveTextContent("Measured, without the assistant");
     expect(tile("With the assistant")).toHaveTextContent("12.4 h");
     expect(within(tile("With the assistant")).getByText("Estimate")).toBeInTheDocument();
     const init = api.fetchMock.mock.calls.find(([u]) => String(u).endsWith(STATS_PATH))?.[1];
@@ -95,31 +94,99 @@ describe("dashboard content", () => {
     expect(rows).toEqual(["Identity & Access90% · 9 of 10", "Network62% · 13 of 21", "CloudNo feedback yet"]);
   });
 
-  it("shows the measured baseline by priority and labels the assisted figure as an estimate with its assumptions", async () => {
+  it("shows the incident overview from the backend counts", async () => {
     backend();
     signIn(LEAD);
     renderApp("/analyst/dashboard");
-    const baseline = await screen.findByRole("region", { name: "Measured baseline" });
-    expect(within(baseline).getByText(/Median of 980 resolved historical tickets/)).toBeInTheDocument();
-    expect(within(baseline).getByText(/mean 26.3 h/)).toBeInTheDocument();
-    expect(within(baseline).getByRole("row", { name: /P1 4.2 h 140/ })).toBeInTheDocument();
-    const estimate = screen.getByRole("region", { name: "Estimated with the assistant" });
-    expect(within(estimate).getByText("Estimate")).toBeInTheDocument();
-    expect(within(estimate).getByText("Estimated, not observed. Based on these assumptions:")).toBeInTheDocument();
-    expect(within(estimate).getByText("Analysts accept 60% of recommendations")).toBeInTheDocument();
-    expect(screen.getByText(/must not be reported as an observed result/)).toBeInTheDocument();
+    expect(await screen.findByRole("article", { name: "Total incidents" })).toHaveTextContent("1,100");
+    expect(tile("Resolved")).toHaveTextContent("980");
+    expect(tile("Pending")).toHaveTextContent("120");
+    expect(tile("Critical")).toHaveTextContent("147");
+    expect(tile("Resolution rate")).toHaveTextContent("89%");
+    expect(tile("Resolution rate")).toHaveTextContent("980 of 1,100 resolved");
   });
 
-  it("says MTTR is not available instead of showing numbers when it is missing", async () => {
-    backend(ok({ ...STATS, mttr_baseline: null, mttr_assisted: null }));
+  it("shows measured MTTR, the estimate, time saved and improvement, each labelled", async () => {
+    backend();
     signIn(LEAD);
     renderApp("/analyst/dashboard");
-    await screen.findByRole("article", { name: "Analyses" });
-    expect(tile("Median time to resolve")).toHaveTextContent("—Not available yet");
-    expect(tile("With the assistant")).toHaveTextContent("—Not available yet");
-    expect(within(tile("With the assistant")).queryByText("Estimate")).not.toBeInTheDocument();
-    expect(screen.getByText("Not available yet: the baseline calculation is not connected.")).toBeInTheDocument();
+    await screen.findByRole("article", { name: "Median time to resolve" });
+    expect(tile("Median time to resolve")).toHaveTextContent("Measured, without the assistant · 980 tickets");
+    expect(within(tile("Median time to resolve")).queryByText("Estimate")).not.toBeInTheDocument();
+    for (const label of ["With the assistant", "Time saved", "Improvement"]) {
+      expect(within(tile(label)).getByText("Estimate")).toBeInTheDocument();
+    }
+    expect(tile("Time saved")).toHaveTextContent("6.1 h");
+    expect(tile("Improvement")).toHaveTextContent("33%");
+    expect(screen.getByText("Analysts accept 60% of recommendations")).toBeInTheDocument();
+    expect(screen.getByText(/must not be reported as observed results/)).toBeInTheDocument();
+    expect(screen.getByText(/missing, unreadable or negative duration are left out/)).toBeInTheDocument();
+  });
+
+  it("shows MTTR by priority and by service, slowest service first", async () => {
+    backend();
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    const byPriority = await screen.findByRole("list", { name: "Median time to resolve by priority" });
+    expect(within(byPriority).getAllByRole("listitem").map((li) => li.textContent))
+      .toEqual(["P14.2 h · 140 tickets", "P215.0 h · 360 tickets"]);
+    const byService = screen.getByRole("list", { name: "Median time to resolve by service" });
+    expect(within(byService).getAllByRole("listitem").map((li) => li.textContent))
+      .toEqual(["SAP ERP30.5 h · 40 tickets", "Corporate VPN12.1 h · 44 tickets"]);
+  });
+
+  it("draws the resolution trend with a focusable point per month and a table view", async () => {
+    backend();
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    const chart = await screen.findByRole("group", { name: "Median time to resolve by month" });
+    const points = within(chart).getAllByRole("img");
+    expect(points).toHaveLength(3);
+    expect(points[0]).toHaveAttribute("aria-label", "Jun 2026: median 20.3 h, 160 resolved");
+    expect(points[0]).toHaveAttribute("tabindex", "0");
+    const table = screen.getByRole("table", { name: "Median time to resolve by month" });
+    expect(within(table).getAllByRole("row")).toHaveLength(4); // header + 3 months
+  });
+
+  it("shows priority P1-P4 in order and folds services past the top seven into Other", async () => {
+    backend();
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    const priority = await screen.findByRole("list", { name: "Incidents by priority" });
+    expect(within(priority).getAllByRole("listitem").map((li) => li.textContent))
+      .toEqual(["P1147 · 13%", "P2386 · 35%", "P3442 · 40%", "P4125 · 11%"]);
+    const services = screen.getByRole("list", { name: "Incidents by service" });
+    const rows = within(services).getAllByRole("listitem").map((li) => li.textContent);
+    expect(rows).toHaveLength(8);
+    expect(rows[0]).toBe("Service A200 · 18%");
+    expect(rows[7]).toBe("Other services (3)360 · 33%"); // 130 + 120 + 110: nothing dropped
+    expect(within(screen.getByRole("list", { name: "Incidents by category" })).getAllByRole("listitem")[0])
+      .toHaveTextContent("Network150 · 14%");
+  });
+
+  it("says MTTR, incidents and distributions are not available instead of showing numbers", async () => {
+    backend(ok({ total_results: 120, outcome_counts: STATS.outcome_counts, feedback_by_category: STATS.feedback_by_category }));
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    expect(await screen.findByText("Incident figures are not available yet: the statistics service does not return them."))
+      .toBeInTheDocument();
+    for (const label of ["Median time to resolve", "With the assistant", "Time saved", "Improvement"]) {
+      expect(tile(label)).toHaveTextContent("—Not available yet");
+      expect(within(tile(label)).queryByText("Estimate")).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole("group", { name: "Median time to resolve by month" })).not.toBeInTheDocument();
     expect(screen.getByText("Not available yet: the estimate is not connected.")).toBeInTheDocument();
+    const distribution = screen.getByRole("region", { name: "Incident distribution" });
+    expect(within(distribution).getAllByText("Not available yet.")).toHaveLength(3);
+  });
+
+  it("explains that filters are not offered yet instead of filtering a partial list", async () => {
+    const api = backend();
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    expect(await screen.findByText(/filters will appear once the statistics service supports them/)).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(api.callsTo("GET", "/api/tickets")).toHaveLength(0); // never counts from the 50-row ticket list
   });
 
   it("shows no useful rate (not 0%) when there is no feedback", async () => {
@@ -136,6 +203,7 @@ describe("dashboard content", () => {
     signIn(LEAD);
     renderApp("/analyst/dashboard");
     expect(await screen.findByText("No analyses yet")).toBeInTheDocument();
+    expect(await screen.findByText("Chain intact")).toBeInTheDocument(); // audit still shown
     expect(screen.queryByRole("article", { name: "Analyses" })).not.toBeInTheDocument();
   });
 

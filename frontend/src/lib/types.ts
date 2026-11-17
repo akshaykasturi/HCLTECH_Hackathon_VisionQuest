@@ -313,12 +313,28 @@ export interface CategoryFeedback {
   usefulRate: number | null;  // null when nothing was rated: never shown as 0%
 }
 
+/** A count per named group (priority, service, category). */
+export interface CountRow {
+  label: string;
+  count: number;
+}
+
+/** Historical incidents (every ticket counted once). */
+export interface IncidentOverview {
+  total: number;
+  resolved: number;   // resolved or closed
+  pending: number;    // open or in progress
+  critical: number;   // priority P1
+}
+
 /** Measured from historical ticket timestamps (created -> resolved). */
 export interface MttrBaseline {
   medianHours: number;
   meanHours: number | null;
   tickets: number;
   byPriority: { priority: string; medianHours: number; tickets: number }[];
+  byService: { service: string; medianHours: number; tickets: number }[];
+  trend: { month: string; medianHours: number; resolved: number }[];   // oldest first
 }
 
 /** An ESTIMATE with stated assumptions: never shown as an observed value (docs/DATA-CARD.md). */
@@ -331,6 +347,12 @@ export interface DashboardStats {
   analyses: number;
   outcomes: OutcomeShare[];           // always all four outcomes, in OUTCOMES order
   categories: CategoryFeedback[];
+  incidents: IncidentOverview | null; // null = not available yet
+  byPriority: CountRow[];             // [] = not available yet
+  byService: CountRow[];
+  byCategory: CountRow[];
   mttrBaseline: MttrBaseline | null;  // null = not available yet
   mttrAssisted: MttrAssisted | null;  // null = not available yet
+  /** ESTIMATED saving: baseline median minus assisted median. null unless both exist. */
+  timeSaved: { hours: number; percent: number | null } | null;
 }
