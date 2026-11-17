@@ -1,0 +1,103 @@
+{
+ "split": "val",
+ "n_queries": 176,
+ "k": 3,
+ "mrr_depth": 10,
+ "embeddings": "BAAI/bge-small-en-v1.5",
+ "best": {
+  "strategy": "heading",
+  "method": "hybrid"
+ },
+ "results": [
+  {
+   "strategy": "fixed",
+   "method": "bm25",
+   "recall_at_k": 0.7614,
+   "mrr": 0.5934,
+   "doc_recall_at_k": 0.9716,
+   "n_chunks": 155,
+   "avg_words": 113.8,
+   "build_seconds": 20.9
+  },
+  {
+   "strategy": "fixed",
+   "method": "dense",
+   "recall_at_k": 0.7443,
+   "mrr": 0.546,
+   "doc_recall_at_k": 0.9375,
+   "n_chunks": 155,
+   "avg_words": 113.8,
+   "build_seconds": 20.9
+  },
+  {
+   "strategy": "fixed",
+   "method": "hybrid",
+   "recall_at_k": 0.8011,
+   "mrr": 0.5719,
+   "doc_recall_at_k": 0.9659,
+   "n_chunks": 155,
+   "avg_words": 113.8,
+   "build_seconds": 20.9
+  },
+  {
+   "strategy": "heading",
+   "method": "bm25",
+   "recall_at_k": 0.8125,
+   "mrr": 0.5107,
+   "doc_recall_at_k": 0.9773,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 25.87
+  },
+  {
+   "strategy": "heading",
+   "method": "dense",
+   "recall_at_k": 0.75,
+   "mrr": 0.5185,
+   "doc_recall_at_k": 0.9261,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 25.87
+  },
+  {
+   "strategy": "heading",
+   "method": "hybrid",
+   "recall_at_k": 0.8409,
+   "mrr": 0.4923,
+   "doc_recall_at_k": 0.9659,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 25.87
+  },
+  {
+   "strategy": "contextual",
+   "method": "bm25",
+   "recall_at_k": 0.8068,
+   "mrr": 0.5123,
+   "doc_recall_at_k": 0.983,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 8.04
+  },
+  {
+   "strategy": "contextual",
+   "method": "dense",
+   "recall_at_k": 0.7159,
+   "mrr": 0.4902,
+   "doc_recall_at_k": 0.9375,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 8.04
+  },
+  {
+   "strategy": "contextual",
+   "method": "hybrid",
+   "recall_at_k": 0.8295,
+   "mrr": 0.4885,
+   "doc_recall_at_k": 0.9716,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 8.04
+  }
+ ]
+}

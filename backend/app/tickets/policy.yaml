@@ -28,3 +28,9 @@ gate:
     "Endpoint|Network": "Is the problem with your laptop or device itself, or with the network or VPN connection?"
     "Collaboration|Identity & Access": "Can you not sign in at all, or are you signed in but a meeting, chat or mail feature fails?"
     "Cloud|Infrastructure": "Is this about a cloud service or account, or about our own servers and platforms?"
+
+# KB chunking for search (app/tickets/kb.py): fixed | heading | contextual.
+# Chosen on the VAL split by scripts/eval_chunking.py (docs/results/chunking_val.json), 176 queries,
+# recall@3 = a top-3 chunk contains the gold key sentence: heading+hybrid 0.841 (best), contextual+hybrid 0.830,
+# fixed+hybrid 0.801. Test-split numbers are in docs/results/chunking_test.json (report only, not for choosing).
+kb_chunking: heading

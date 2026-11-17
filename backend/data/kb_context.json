@@ -1,0 +1,552 @@
+{
+ "doc:kb/KB-001#1@d9df37be05ef2d45": {
+  "section_id": "doc:kb/KB-001#1",
+  "prefix": "This article on MFA sign-in failures on the SSO Portal, an Identity & Access service, describes the symptoms and scope of the issue. It also lists the known causes covered in this guide.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-001#2@cb2d75a4d80f3928": {
+  "section_id": "doc:kb/KB-001#2",
+  "prefix": "This article on MFA sign-in failures on the SSO Portal, an Identity & Access service, outlines the necessary prerequisites and initial steps before starting the troubleshooting process.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-001#3@c40d6959bae06ee3": {
+  "section_id": "doc:kb/KB-001#3",
+  "prefix": "This article on MFA sign-in failures on the SSO Portal, an Identity & Access service, details specific diagnostic checks for each identified cause of the issue.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-001#4@b5f4e23cb73d974b": {
+  "section_id": "doc:kb/KB-001#4",
+  "prefix": "This article on MFA sign-in failures on the SSO Portal, an Identity & Access service, provides specific resolution steps tailored to each identified cause of the problem.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-001#5@0eefde13fb059843": {
+  "section_id": "doc:kb/KB-001#5",
+  "prefix": "This article on MFA sign-in failures on the SSO Portal, an Identity & Access service, describes the validation steps to confirm a fix and the criteria for escalating the issue.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-002#1@2bb2caaed876faad": {
+  "section_id": "doc:kb/KB-002#1",
+  "prefix": "This article on repeated Active Directory account lockouts in Identity & Access describes the symptoms and scope of the issue, outlining common causes for account lockouts.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-002#2@beb989c22222af58": {
+  "section_id": "doc:kb/KB-002#2",
+  "prefix": "This article on repeated Active Directory account lockouts in Identity & Access outlines the necessary preparations and initial steps to take before starting the troubleshooting process.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-002#3@c28359ed0392a022": {
+  "section_id": "doc:kb/KB-002#3",
+  "prefix": "This article on repeated Active Directory account lockouts in Identity & Access details diagnostic checks for various causes, such as mobile mail profiles, persistent mapped drives, or application configurations.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-002#4@0ae52a40f5d6dcc2": {
+  "section_id": "doc:kb/KB-002#4",
+  "prefix": "This article on repeated Active Directory account lockouts in Identity & Access provides specific resolution steps tailored to each identified cause of the lockout issue.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-002#5@cd0d754fcfb2e103": {
+  "section_id": "doc:kb/KB-002#5",
+  "prefix": "This article on repeated Active Directory account lockouts in Identity & Access describes how to validate the resolution and when to escalate the issue to other support teams.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-003#1@7b8e22e95addcc5f": {
+  "section_id": "doc:kb/KB-003#1",
+  "prefix": "This section of the \"Access provisioning failures and delays\" article, under Identity & Access and Access Governance, describes the symptoms and scope of access issues. It outlines common causes like missing HR records or connector failures.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-003#2@32236d5708ec2f15": {
+  "section_id": "doc:kb/KB-003#2",
+  "prefix": "This section of the \"Access provisioning failures and delays\" article, under Identity & Access and Access Governance, details the prerequisites and initial information gathering steps before diagnosing access issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-003#3@8718571e008de421": {
+  "section_id": "doc:kb/KB-003#3",
+  "prefix": "This section of the \"Access provisioning failures and delays\" article, under Identity & Access and Access Governance, outlines diagnostic checks for common causes of access provisioning issues. It covers verifying HR records, connector status, and approver availability.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-003#4@5375b66828e98bfd": {
+  "section_id": "doc:kb/KB-003#4",
+  "prefix": "This section of the \"Access provisioning failures and delays\" article, under Identity & Access and Access Governance, provides resolution steps for specific causes of access provisioning failures. It details actions for HR record issues and connector authentication problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-003#5@e38ac145ab63d265": {
+  "section_id": "doc:kb/KB-003#5",
+  "prefix": "This section of the \"Access provisioning failures and delays\" article, under Identity & Access and Access Governance, describes how to validate resolved access provisioning issues. It also specifies when and to whom to escalate unresolved or complex problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-004#1@03ce3c1b574abb2e": {
+  "section_id": "doc:kb/KB-004#1",
+  "prefix": "This Network category article on Corporate VPN connection problems describes common symptoms, potential causes, and the scope of issues covered in this guide.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-004#2@a5b84adb65bd1f86": {
+  "section_id": "doc:kb/KB-004#2",
+  "prefix": "This Network category article on Corporate VPN connection problems outlines necessary preparations and initial information gathering before starting any troubleshooting steps.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-004#3@2e7b5ddae2603f32": {
+  "section_id": "doc:kb/KB-004#3",
+  "prefix": "This Network category article on Corporate VPN connection problems details specific diagnostic checks to identify the root cause of various connection failures.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-004#4@744d4b28a2f48e83": {
+  "section_id": "doc:kb/KB-004#4",
+  "prefix": "This Network category article on Corporate VPN connection problems provides specific resolution steps tailored to each identified cause of connection issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-004#5@ab559bc3637b53ee": {
+  "section_id": "doc:kb/KB-004#5",
+  "prefix": "This Network category article on Corporate VPN connection problems describes how to validate a successful resolution and when to escalate issues to other teams.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-005#1@a2f5fef2f5102acc": {
+  "section_id": "doc:kb/KB-005#1",
+  "prefix": "This article on Corporate DNS Network resolution failures describes the symptoms and scope of internal DNS issues. It also outlines common causes like stale records or missing conditional forwarders.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-005#2@096cbf21a232497e": {
+  "section_id": "doc:kb/KB-005#2",
+  "prefix": "This article on Corporate DNS Network resolution failures provides guidance on what to do before starting troubleshooting. It covers necessary access and information to gather for diagnosis.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-005#3@e8e81ecbfba7a78b": {
+  "section_id": "doc:kb/KB-005#3",
+  "prefix": "This article on Corporate DNS Network resolution failures details diagnostic checks for various causes. It explains how to investigate issues like stale records, missing entries, or unreachable forwarders.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-005#4@7e2b369d30c4ec88": {
+  "section_id": "doc:kb/KB-005#4",
+  "prefix": "This article on Corporate DNS Network resolution failures outlines resolution steps for each identified cause. It provides specific actions to address issues like stale records or missing DNS entries.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-005#5@6bb1c2f60473819b": {
+  "section_id": "doc:kb/KB-005#5",
+  "prefix": "This article on Corporate DNS Network resolution failures describes how to validate a resolution and when to escalate. It covers confirming the fix and identifying situations requiring further assistance.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-006#1@009446d3e89d1e5a": {
+  "section_id": "doc:kb/KB-006#1",
+  "prefix": "This article on Office Wi-Fi network connectivity problems describes the symptoms and scope of issues. It lists common causes like driver problems, authentication failures, and coverage gaps.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-006#2@8183ce684981dc9f": {
+  "section_id": "doc:kb/KB-006#2",
+  "prefix": "This article on Office Wi-Fi network connectivity problems outlines the necessary preparations before starting troubleshooting. It details required access and information to collect.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-006#3@4baf52e4e03e55c4": {
+  "section_id": "doc:kb/KB-006#3",
+  "prefix": "This article on Office Wi-Fi network connectivity problems details diagnostic checks for various causes. It covers how to investigate issues like outdated drivers, missing certificates, and coverage gaps.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-006#4@cb19b7420549d7f3": {
+  "section_id": "doc:kb/KB-006#4",
+  "prefix": "This article on Office Wi-Fi network connectivity problems provides resolution steps for each identified cause. It outlines procedures for issues like outdated drivers and missing machine certificates.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-006#5@ddc4b2668a0c9337": {
+  "section_id": "doc:kb/KB-006#5",
+  "prefix": "This article on Office Wi-Fi network connectivity problems covers validating the resolution and escalation procedures. It explains how to confirm fixes and when to involve Network Operations.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-007#1@6e42eb1431dd4e40": {
+  "section_id": "doc:kb/KB-007#1",
+  "prefix": "This article, 'Email delivery delays and failures' in the Collaboration category for Exchange Online, describes the symptoms and scope of email delivery issues, listing common causes.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-007#2@abd6f9250238ef5d": {
+  "section_id": "doc:kb/KB-007#2",
+  "prefix": "This article, 'Email delivery delays and failures' in the Collaboration category for Exchange Online, details the prerequisites and initial steps to take before diagnosing email delivery issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-007#3@42d5a8ca76e87194": {
+  "section_id": "doc:kb/KB-007#3",
+  "prefix": "This article, 'Email delivery delays and failures' in the Collaboration category for Exchange Online, outlines diagnostic checks for various causes of email delivery problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-007#4@27c105fc771c864e": {
+  "section_id": "doc:kb/KB-007#4",
+  "prefix": "This article, 'Email delivery delays and failures' in the Collaboration category for Exchange Online, presents resolution steps tailored to specific causes of email delivery issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-007#5@7142734d2a31948a": {
+  "section_id": "doc:kb/KB-007#5",
+  "prefix": "This article, 'Email delivery delays and failures' in the Collaboration category for Exchange Online, explains how to validate resolutions and when to escalate email delivery problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-008#1@6749c00beba4858b": {
+  "section_id": "doc:kb/KB-008#1",
+  "prefix": "This Microsoft Teams Collaboration article on meeting and client problems describes common symptoms and outlines the known causes for issues like audio problems, client malfunction, or inability to join meetings.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-008#2@54f2269f53f0e1a7": {
+  "section_id": "doc:kb/KB-008#2",
+  "prefix": "This Microsoft Teams Collaboration article on meeting and client problems provides essential preparatory steps, including required access to admin tools and guidance on initial information collection before starting diagnostics.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-008#3@32358f257f19dc53": {
+  "section_id": "doc:kb/KB-008#3",
+  "prefix": "This Microsoft Teams Collaboration article on meeting and client problems details specific diagnostic checks for various issues, such as verifying audio device settings, checking client cache, or reviewing meeting policies.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-008#4@29946db7c9616376": {
+  "section_id": "doc:kb/KB-008#4",
+  "prefix": "This Microsoft Teams Collaboration article on meeting and client problems outlines specific resolution steps tailored to each identified cause, such as correcting audio device settings or clearing the client cache.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-008#5@5e5d7cace245438a": {
+  "section_id": "doc:kb/KB-008#5",
+  "prefix": "This Microsoft Teams Collaboration article on meeting and client problems explains how to validate resolved issues and provides criteria for escalating problems to Collaboration Support engineering or other teams.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-009#1@7b8506c48ee6f5de": {
+  "section_id": "doc:kb/KB-009#1",
+  "prefix": "This article, \"Low disk space on Windows endpoints\" in the Endpoint category for Windows Endpoint service, describes the symptoms of low disk space and outlines the common causes addressed.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-009#2@818a80eccd2a7c2e": {
+  "section_id": "doc:kb/KB-009#2",
+  "prefix": "This article, \"Low disk space on Windows endpoints\" in the Endpoint category for Windows Endpoint service, outlines necessary preparations and considerations before starting troubleshooting steps.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-009#3@158d34f73cf3bf09": {
+  "section_id": "doc:kb/KB-009#3",
+  "prefix": "This article, \"Low disk space on Windows endpoints\" in the Endpoint category for Windows Endpoint service, details diagnostic checks to identify the specific cause of low disk space.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-009#4@63ca4885e5bf38b2": {
+  "section_id": "doc:kb/KB-009#4",
+  "prefix": "This article, \"Low disk space on Windows endpoints\" in the Endpoint category for Windows Endpoint service, provides specific resolution steps for each identified cause of low disk space.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-009#5@053add5d24b13d6a": {
+  "section_id": "doc:kb/KB-009#5",
+  "prefix": "This article, \"Low disk space on Windows endpoints\" in the Endpoint category for Windows Endpoint service, describes how to validate resolutions and when to escalate issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-010#1@d53b398385f0182e": {
+  "section_id": "doc:kb/KB-010#1",
+  "prefix": "This article, \"Software Center installation failures\" in the Endpoint category for Software Center, describes the symptoms, scope, and known causes of application installation problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-010#2@85acd90f97919814": {
+  "section_id": "doc:kb/KB-010#2",
+  "prefix": "This section of the Endpoint Software Center article \"Software Center installation failures\" covers the necessary preparations and information gathering before starting any troubleshooting steps.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-010#3@c05eb190eb8ea1f7": {
+  "section_id": "doc:kb/KB-010#3",
+  "prefix": "This section of the Endpoint Software Center article \"Software Center installation failures\" outlines specific diagnostic checks to identify the root cause for various installation problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-010#4@ee4352f0ed4d531e": {
+  "section_id": "doc:kb/KB-010#4",
+  "prefix": "This section of the Endpoint Software Center article \"Software Center installation failures\" details the resolution steps for each specific cause of application installation failure.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-010#5@7d844982982a1796": {
+  "section_id": "doc:kb/KB-010#5",
+  "prefix": "This section of the Endpoint Software Center article \"Software Center installation failures\" explains how to validate a successful fix and when to escalate persistent or widespread issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-011#1@795ef2bcfedcbb27": {
+  "section_id": "doc:kb/KB-011#1",
+  "prefix": "This Endpoint Print Services article, \"Printing problems with managed print queues,\" describes common symptoms and the scope of known causes for printing issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-011#2@8132234a0af6e5f8": {
+  "section_id": "doc:kb/KB-011#2",
+  "prefix": "This Endpoint Print Services article, \"Printing problems with managed print queues,\" outlines prerequisites and initial steps before troubleshooting printing issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-011#3@a46e1e69c3dbcad9": {
+  "section_id": "doc:kb/KB-011#3",
+  "prefix": "This Endpoint Print Services article, \"Printing problems with managed print queues,\" details diagnostic checks for various causes of printing issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-011#4@d2de205c0d02d4df": {
+  "section_id": "doc:kb/KB-011#4",
+  "prefix": "This Endpoint Print Services article, \"Printing problems with managed print queues,\" provides resolution steps for each identified cause of printing issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-011#5@a1fd516ecbc67722": {
+  "section_id": "doc:kb/KB-011#5",
+  "prefix": "This Endpoint Print Services article, \"Printing problems with managed print queues,\" covers validation steps and when to escalate printing issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-012#1@678570858f02bd85": {
+  "section_id": "doc:kb/KB-012#1",
+  "prefix": "This Cloud Object Storage article on access errors describes the symptoms and scope of common issues, including various causes like identity permissions and network restrictions.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-012#2@3affe149c8741074": {
+  "section_id": "doc:kb/KB-012#2",
+  "prefix": "This Cloud Object Storage article on access errors explains what is needed before starting troubleshooting, including required access to logs and information to record.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-012#3@07151025a8f18a73": {
+  "section_id": "doc:kb/KB-012#3",
+  "prefix": "This Cloud Object Storage article on access errors outlines diagnostic checks for various causes, such as missing workload identity roles, rotated access keys, or firewall issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-012#4@2d86286a7451fc65": {
+  "section_id": "doc:kb/KB-012#4",
+  "prefix": "This Cloud Object Storage article on access errors details resolution steps for each identified cause, including fixing workload identity roles, updating access keys, and adjusting firewall rules.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-012#5@532b9c5937599cf3": {
+  "section_id": "doc:kb/KB-012#5",
+  "prefix": "This Cloud Object Storage article on access errors covers validating successful fixes and when to escalate issues, such as public data exposure or widespread application failures.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-013#1@295f680bb1be1c5b": {
+  "section_id": "doc:kb/KB-013#1",
+  "prefix": "This section of the Cloud Virtual Machines article \"Virtual machine availability problems\" outlines common symptoms and the scope of known causes for virtual machine availability issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-013#2@e71b92d280e4ae21": {
+  "section_id": "doc:kb/KB-013#2",
+  "prefix": "This section of the Cloud Virtual Machines article \"Virtual machine availability problems\" describes the prerequisites and initial information gathering steps before starting any diagnostic or resolution work.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-013#3@9650a2fbea992314": {
+  "section_id": "doc:kb/KB-013#3",
+  "prefix": "This section of the Cloud Virtual Machines article \"Virtual machine availability problems\" details specific diagnostic checks to identify the root cause of virtual machine availability problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-013#4@888b59f30e00c120": {
+  "section_id": "doc:kb/KB-013#4",
+  "prefix": "This section of the Cloud Virtual Machines article \"Virtual machine availability problems\" provides detailed resolution steps, organized by cause, for addressing virtual machine availability issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-013#5@f83413c941c8bc02": {
+  "section_id": "doc:kb/KB-013#5",
+  "prefix": "This section of the Cloud Virtual Machines article \"Virtual machine availability problems\" describes how to validate the resolution of virtual machine issues and when to escalate to engineering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-014#1@4c677fb887733e73": {
+  "section_id": "doc:kb/KB-014#1",
+  "prefix": "This Database PostgreSQL article on connection failures describes the symptoms and scope of the issue. It outlines common causes like connection limits, credentials, TLS settings, network rules, and failover.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-014#2@7f1263e6905f302a": {
+  "section_id": "doc:kb/KB-014#2",
+  "prefix": "This Database PostgreSQL article on connection failures provides important information to consider before starting troubleshooting. It covers necessary access and initial data collection.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-014#3@77b8d64f32221499": {
+  "section_id": "doc:kb/KB-014#3",
+  "prefix": "This Database PostgreSQL article on connection failures details diagnostic checks for various causes. It explains how to investigate issues like connection limits, incorrect passwords, TLS enforcement, and failover problems.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-014#4@a7d40a1787d38111": {
+  "section_id": "doc:kb/KB-014#4",
+  "prefix": "This Database PostgreSQL article on connection failures outlines resolution steps for each identified cause. It provides specific actions to address issues like connection limits, password mismatches, and TLS requirements.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-014#5@27d80c7153dcd203": {
+  "section_id": "doc:kb/KB-014#5",
+  "prefix": "This Database PostgreSQL article on connection failures describes how to validate that the issue is resolved. It also provides guidelines on when and how to escalate the problem to engineering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-015#1@910b72170659153b": {
+  "section_id": "doc:kb/KB-015#1",
+  "prefix": "This Database PostgreSQL article on query performance problems describes the symptoms and scope of common issues. It outlines typical causes like missing indexes, outdated statistics, and table bloat.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-015#2@bb75eea5d458ea09": {
+  "section_id": "doc:kb/KB-015#2",
+  "prefix": "This Database article on PostgreSQL query performance problems outlines the prerequisites and initial steps required before diagnosis.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-015#3@e1a33ac86a71fe0c": {
+  "section_id": "doc:kb/KB-015#3",
+  "prefix": "This Database article on PostgreSQL query performance problems details the diagnostic checks for various identified causes.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-015#4@c3035cf5286533bc": {
+  "section_id": "doc:kb/KB-015#4",
+  "prefix": "This Database article on PostgreSQL query performance problems provides resolution steps for each identified cause.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-015#5@e70572b079cd06d5": {
+  "section_id": "doc:kb/KB-015#5",
+  "prefix": "This Database article on PostgreSQL query performance problems explains how to validate the resolution and when to escalate issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-016#1@705546142977bc3a": {
+  "section_id": "doc:kb/KB-016#1",
+  "prefix": "This Business Applications article on SAP ERP transaction failures outlines the symptoms and scope of common transaction failures, detailing their known causes and typical signals.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-016#2@372794be007fd48a": {
+  "section_id": "doc:kb/KB-016#2",
+  "prefix": "This Business Applications article on SAP ERP transaction failures describes the necessary prerequisites and initial information gathering steps before starting any diagnostic work.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-016#3@1ad8303ab4f038cb": {
+  "section_id": "doc:kb/KB-016#3",
+  "prefix": "This Business Applications article on SAP ERP transaction failures details specific diagnostic checks for identified causes, including authorisation, posting period, vendor master, workflow, and interface issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-016#4@3523aee04a5e2fa3": {
+  "section_id": "doc:kb/KB-016#4",
+  "prefix": "This Business Applications article on SAP ERP transaction failures provides resolution steps tailored to each specific cause, such as missing authorisations, unopened posting periods, or blocked vendor master records.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-016#5@8ba032855696b732": {
+  "section_id": "doc:kb/KB-016#5",
+  "prefix": "This Business Applications article on SAP ERP transaction failures explains how to validate a successful resolution and when to escalate persistent or widespread issues to support engineering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-017#1@b649f561e01c5cbc": {
+  "section_id": "doc:kb/KB-017#1",
+  "prefix": "This article on CRM data synchronisation problems in Salesforce Business Applications describes the symptoms and scope of these issues. It outlines common causes like expired credentials, missing field mappings, and API limits.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-017#2@c4fc62b1e1e57072": {
+  "section_id": "doc:kb/KB-017#2",
+  "prefix": "This article on CRM data synchronisation problems in Salesforce Business Applications provides essential steps to take before starting troubleshooting. It covers required access and initial information gathering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-017#3@38f38e156470e829": {
+  "section_id": "doc:kb/KB-017#3",
+  "prefix": "This article on CRM data synchronisation problems in Salesforce Business Applications details diagnostic checks for specific causes. It covers how to investigate issues like expired integration credentials or missing field mappings.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-017#4@44b1c69d325c7b82": {
+  "section_id": "doc:kb/KB-017#4",
+  "prefix": "This article on CRM data synchronisation problems in Salesforce Business Applications outlines resolution steps for each identified cause. It provides specific actions to address issues like expired credentials or API limits.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-017#5@d7144be39f003981": {
+  "section_id": "doc:kb/KB-017#5",
+  "prefix": "This article on CRM data synchronisation problems in Salesforce Business Applications describes validation and escalation procedures. It explains how to confirm resolution and when to escalate issues to support engineering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-018#1@8f6f850357898c6a": {
+  "section_id": "doc:kb/KB-018#1",
+  "prefix": "This Security Email Security article, \"Suspicious email and phishing reports,\" describes the symptoms and scope of suspicious email incidents. It outlines common causes like credential harvesting or malicious attachments.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-018#2@472970386bca1b12": {
+  "section_id": "doc:kb/KB-018#2",
+  "prefix": "This Security Email Security article, \"Suspicious email and phishing reports,\" details prerequisites and initial steps. It covers necessary roles and information to gather before beginning an investigation.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-018#3@4f28f2f413361355": {
+  "section_id": "doc:kb/KB-018#3",
+  "prefix": "This Security Email Security article, \"Suspicious email and phishing reports,\" outlines diagnostic checks for various scenarios. It covers steps like searching for messages or checking sign-in logs based on the incident type.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-018#4@ae3a980cf2c3787a": {
+  "section_id": "doc:kb/KB-018#4",
+  "prefix": "This Security Email Security article, \"Suspicious email and phishing reports,\" provides resolution steps tailored to each incident cause. It details actions for reported phish, credential submission, or malicious attachments.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-018#5@123382a0f0d87f06": {
+  "section_id": "doc:kb/KB-018#5",
+  "prefix": "This Security Email Security article, \"Suspicious email and phishing reports,\" explains validation and escalation procedures. It covers confirming resolution actions and criteria for escalating to incident response.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-019#1@3a1642010b1565ba": {
+  "section_id": "doc:kb/KB-019#1",
+  "prefix": "This Security Endpoint Detection article on Endpoint detection alerts describes the symptoms and scope of alerts. It covers various known causes, ranging from false positives to active threats, and how triage decides on containment.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-019#2@9d9addce145b4d6d": {
+  "section_id": "doc:kb/KB-019#2",
+  "prefix": "This Security Endpoint Detection article on Endpoint detection alerts outlines prerequisites and initial steps. It advises on roles, credentials, evidence preservation, and recording incident details before acting.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-019#3@20a2277603f64412": {
+  "section_id": "doc:kb/KB-019#3",
+  "prefix": "This Security Endpoint Detection article on Endpoint detection alerts details diagnostic checks. It provides specific steps to investigate various alert causes, such as malicious executables, internal tools, or sensor issues.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-019#4@4c460fe4e06bfaee": {
+  "section_id": "doc:kb/KB-019#4",
+  "prefix": "This Security Endpoint Detection article on Endpoint detection alerts provides resolution steps. It details specific actions for each identified cause, including isolating devices, verifying tools, or removing unwanted applications.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-019#5@9959b7541022bc5a": {
+  "section_id": "doc:kb/KB-019#5",
+  "prefix": "This Security Endpoint Detection article on Endpoint detection alerts covers validation and escalation. It describes confirming alert resolution, device health, and criteria for escalating to incident response leads.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-020#1@dbb75f3c3b6608a0": {
+  "section_id": "doc:kb/KB-020#1",
+  "prefix": "This Infrastructure article on Customer API outages and errors describes the symptoms and scope of these issues. It outlines common causes like faulty releases, dependency timeouts, and rate limits.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-020#2@47e48858b09f5d91": {
+  "section_id": "doc:kb/KB-020#2",
+  "prefix": "This Infrastructure article on Customer API outages and errors covers the necessary preparations before starting diagnosis. It details required access, approval procedures, and initial information to gather.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-020#3@a4764f233e3cfb69": {
+  "section_id": "doc:kb/KB-020#3",
+  "prefix": "This Infrastructure article on Customer API outages and errors details specific diagnostic checks for identified causes. It explains how to investigate issues like faulty releases, dependency timeouts, and autoscaling limits.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-020#4@1f12189cf4f7685e": {
+  "section_id": "doc:kb/KB-020#4",
+  "prefix": "This Infrastructure article on Customer API outages and errors describes resolution steps for each identified cause. It covers actions for faulty releases, external dependency timeouts, and expired backend certificates.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-020#5@af0fd0e229399664": {
+  "section_id": "doc:kb/KB-020#5",
+  "prefix": "This Infrastructure article on Customer API outages and errors discusses validating resolutions and escalation procedures. It covers confirming service restoration and criteria for escalating to an incident commander.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-021#1@a0bc413ecd7f720a": {
+  "section_id": "doc:kb/KB-021#1",
+  "prefix": "This Infrastructure API Gateway article on TLS certificate problems describes the symptoms and scope of issues, including common causes like missing intermediate certificates or expiry.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-021#2@b4c5d31092e83930": {
+  "section_id": "doc:kb/KB-021#2",
+  "prefix": "This Infrastructure API Gateway article on TLS certificate problems outlines prerequisites for troubleshooting, such as access to configuration and certificate stores, and initial information gathering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-021#3@d69b3b55c6c375a1": {
+  "section_id": "doc:kb/KB-021#3",
+  "prefix": "This Infrastructure API Gateway article on TLS certificate problems details diagnostic checks for various causes, including verifying certificate chains, expiry dates, and subject alternative names.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-021#4@f91df4c711f28161": {
+  "section_id": "doc:kb/KB-021#4",
+  "prefix": "This Infrastructure API Gateway article on TLS certificate problems describes resolution steps for each identified cause, such as installing full certificate chains or renewing expired certificates.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-021#5@ba97d1fe21850392": {
+  "section_id": "doc:kb/KB-021#5",
+  "prefix": "This Infrastructure API Gateway article on TLS certificate problems covers validating resolutions by confirming successful handshakes and outlines when to escalate issues to Platform Operations engineering.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-022#1@3f87a1a2bdcdcb8b": {
+  "section_id": "doc:kb/KB-022#1",
+  "prefix": "This section of the Infrastructure Monitoring Platform article \"Monitoring and alerting gaps\" describes the symptoms of monitoring and alerting issues and outlines their common causes, such as notification routes or agent failures.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-022#2@6e35ecbff78d500a": {
+  "section_id": "doc:kb/KB-022#2",
+  "prefix": "This section of the Infrastructure Monitoring Platform article \"Monitoring and alerting gaps\" details the necessary prerequisites and initial information to gather before starting the diagnostic process.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-022#3@118510f6208d85ef": {
+  "section_id": "doc:kb/KB-022#3",
+  "prefix": "This section of the Infrastructure Monitoring Platform article \"Monitoring and alerting gaps\" outlines specific diagnostic checks for each common cause, such as verifying notification routes or agent heartbeats.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-022#4@554bf9f87f9cf4ab": {
+  "section_id": "doc:kb/KB-022#4",
+  "prefix": "This section of the Infrastructure Monitoring Platform article \"Monitoring and alerting gaps\" details the resolution steps for each identified cause of monitoring and alerting issues, including updating routes or restarting agents.",
+  "source": "gemini"
+ },
+ "doc:kb/KB-022#5@dc5ec01d90947770": {
+  "section_id": "doc:kb/KB-022#5",
+  "prefix": "This section of the Infrastructure Monitoring Platform article \"Monitoring and alerting gaps\" describes how to validate that monitoring issues are resolved and when to escalate problems to the Observability engineering team.",
+  "source": "gemini"
+ }
+}

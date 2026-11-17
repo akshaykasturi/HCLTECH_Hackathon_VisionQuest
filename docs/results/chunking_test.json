@@ -1,0 +1,103 @@
+{
+ "split": "test",
+ "n_queries": 154,
+ "k": 3,
+ "mrr_depth": 10,
+ "embeddings": "BAAI/bge-small-en-v1.5",
+ "best": {
+  "strategy": "contextual",
+  "method": "hybrid"
+ },
+ "results": [
+  {
+   "strategy": "fixed",
+   "method": "bm25",
+   "recall_at_k": 0.5584,
+   "mrr": 0.4318,
+   "doc_recall_at_k": 1.0,
+   "n_chunks": 155,
+   "avg_words": 113.8,
+   "build_seconds": 5.42
+  },
+  {
+   "strategy": "fixed",
+   "method": "dense",
+   "recall_at_k": 0.6364,
+   "mrr": 0.4519,
+   "doc_recall_at_k": 0.9805,
+   "n_chunks": 155,
+   "avg_words": 113.8,
+   "build_seconds": 5.42
+  },
+  {
+   "strategy": "fixed",
+   "method": "hybrid",
+   "recall_at_k": 0.6169,
+   "mrr": 0.4246,
+   "doc_recall_at_k": 1.0,
+   "n_chunks": 155,
+   "avg_words": 113.8,
+   "build_seconds": 5.42
+  },
+  {
+   "strategy": "heading",
+   "method": "bm25",
+   "recall_at_k": 0.7468,
+   "mrr": 0.443,
+   "doc_recall_at_k": 1.0,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 7.28
+  },
+  {
+   "strategy": "heading",
+   "method": "dense",
+   "recall_at_k": 0.7468,
+   "mrr": 0.4905,
+   "doc_recall_at_k": 0.974,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 7.28
+  },
+  {
+   "strategy": "heading",
+   "method": "hybrid",
+   "recall_at_k": 0.7922,
+   "mrr": 0.4478,
+   "doc_recall_at_k": 1.0,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 7.28
+  },
+  {
+   "strategy": "contextual",
+   "method": "bm25",
+   "recall_at_k": 0.7273,
+   "mrr": 0.4737,
+   "doc_recall_at_k": 1.0,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 8.03
+  },
+  {
+   "strategy": "contextual",
+   "method": "dense",
+   "recall_at_k": 0.6818,
+   "mrr": 0.5031,
+   "doc_recall_at_k": 0.9805,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 8.03
+  },
+  {
+   "strategy": "contextual",
+   "method": "hybrid",
+   "recall_at_k": 0.8247,
+   "mrr": 0.4633,
+   "doc_recall_at_k": 1.0,
+   "n_chunks": 110,
+   "avg_words": 124.0,
+   "build_seconds": 8.03
+  }
+ ]
+}
