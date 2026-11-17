@@ -3,7 +3,7 @@ import type {
   AnalysisResult, ChainStatus, FeedbackRecord, HealthData, LoginData, Preset, ResultSummary, SavedResult, Taxonomy,
   TicketDetail, TicketSummary,
 } from "../lib/types";
-import type { HistoryRecordApi } from "../lib/api";
+import type { HistoryRecordApi, StatsApi } from "../lib/api";
 
 export const HEALTH_OK: HealthData = { api: "up", database: "up", warmup: "ready", warmup_detail: "1 warm-up step(s) done" };
 export const HEALTH_WARMING: HealthData = { api: "up", database: "up", warmup: "warming", warmup_detail: "running get_index" };
@@ -139,4 +139,18 @@ export const HISTORY_OPEN: HistoryRecordApi = {
   generator: null, model_version: null, prompt_version: null,
   feedback: [{ verdict: "unresolved", note_masked: null, reviewer_id: null, target: "result", target_id: null, created_at: null }],
   resolution: null,
+};
+
+// ---------- dashboard: a raw backend stats record in the PROVISIONAL shape (lib/api.ts), test data only ----------
+export const STATS: StatsApi = {
+  total_results: 120,
+  outcome_counts: { RECOMMEND: 72, CLARIFY: 30, ESCALATE: 12, BLOCKED: 6 },
+  feedback_by_category: [
+    { category: "Network", useful: 13, incorrect: 5, unresolved: 3 },
+    { category: "Identity & Access", useful: 9, incorrect: 1, unresolved: 0 },
+    { category: "Cloud", useful: 0, incorrect: 0, unresolved: 0 },
+  ],
+  mttr_baseline: { median_hours: 18.5, mean_hours: 26.25, tickets: 980,
+                   by_priority: [{ priority: "P1", median_hours: 4.2, tickets: 140 }, { priority: "P2", median_hours: 15, tickets: 360 }] },
+  mttr_assisted: { median_hours: 12.4, assumptions: ["Analysts accept 60% of recommendations", "Accepted fixes save 30% of diagnosis time"] },
 };

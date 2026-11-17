@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   ApiError, assertAnalysis, assertHealth, assertHistory, assertLogin, assertResult, createApiClient, describeError,
-  makeEndpoints, toHistoryEntry,
+  makeEndpoints, toDashboardStats, toHistoryEntry,
 } from "./api";
-import { HISTORY_OPEN, HISTORY_RESOLVED } from "../test/fixtures";
+import { HISTORY_OPEN, HISTORY_RESOLVED, STATS } from "../test/fixtures";
 import { HEALTH_OK } from "../test/fixtures";
 
 function fetchReturning(status: number, body: string | object, headers: Record<string, string> = {}) {
@@ -256,5 +256,44 @@ describe("history adapter (toHistoryEntry)", () => {
     expect(assertHistory([HISTORY_RESOLVED, HISTORY_OPEN]).map((e) => e.id)).toEqual([HISTORY_RESOLVED.result_id, "res-clarify-0002"]);
     expect(() => assertHistory([HISTORY_RESOLVED, { result_id: "x" }])).toThrow(ApiError);
     expect(() => assertHistory({ items: [] })).toThrow(ApiError);
+  });
+});
+
+describe("dashboard adapter (toDashboardStats)", () => {
+  it("maps the backend stats to the frontend shape", () => {
+    const d = toDashboardStats(STATS);
+    expect(d.analyses).toBe(120);
+    expect(d.outcomes).toEqual([{ outcome: "RECOMMEND", count: 72 }, { outcome: "CLARIFY", count: 30 },
+                                { outcome: "ESCALATE", count: 12 }, { outcome: "BLOCKED", count: 6 }]);
+    expect(d.categories[0]).toEqual({ category: "Network", useful: 13, incorrect: 5, unresolved: 3, rated: 21, usefulRate: 13 / 21 });
+    expect(d.mttrBaseline).toEqual({ medianHours: 18.5, meanHours: 26.25, tickets: 980,
+                                     byPriority: [{ priority: "P1", medianHours: 4.2, tickets: 140 },
+                                                  { priority: "P2", medianHours: 15, tickets: 360 }] });
+    expect(d.mttrAssisted?.assumptions).toHaveLength(2);
+    expect(JSON.stringify(d)).not.toMatch(/total_results|outcome_counts|median_hours|by_priority|feedback_by_category/);
+  });
+
+  it("keeps an unrated category's rate missing, not 0", () => {
+    expect(toDashboardStats(STATS).categories.find((c) => c.category === "Cloud")?.usefulRate).toBeNull();
+  });
+
+  it("counts an outcome the backend leaves out as 0 and treats missing lists and MTTR as not available", () => {
+    const d = toDashboardStats({ total_results: 5, outcome_counts: { RECOMMEND: 5 } });
+    expect(d.outcomes.map((o) => o.count)).toEqual([5, 0, 0, 0]);
+    expect([d.categories, d.mttrBaseline, d.mttrAssisted]).toEqual([[], null, null]);
+  });
+
+  it.each([
+    ["a missing total", { total_results: undefined }],
+    ["a negative count", { outcome_counts: { RECOMMEND: -1 } }],
+    ["an unknown outcome", { outcome_counts: { MAYBE: 1 } }],
+    ["outcomes that add up to more than the total", { total_results: 3 }],
+    ["a category without a name", { feedback_by_category: [{ useful: 1 }] }],
+    ["a fractional rating count", { feedback_by_category: [{ category: "Network", useful: 1.5 }] }],
+    ["a negative MTTR", { mttr_baseline: { median_hours: -2, tickets: 3 } }],
+    ["an assisted estimate without assumptions", { mttr_assisted: { median_hours: 5, assumptions: [] } }],
+    ["MTTR given as text", { mttr_assisted: { median_hours: "5h", assumptions: ["x"] } }],
+  ])("rejects %s", (_name, patch) => {
+    expect(() => toDashboardStats({ ...STATS, ...patch })).toThrow(ApiError);
   });
 });

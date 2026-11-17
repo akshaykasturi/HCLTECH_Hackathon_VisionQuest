@@ -294,3 +294,43 @@ export interface TicketFeedbackIn {
   target?: "result" | "match";
   target_id?: string;
 }
+
+// ---------- Dashboard: what the page works with ----------
+// Frontend shape only. The backend stats record (PROVISIONAL: db/repo.stats() and tickets/mttr.py are not merged)
+// and its adapter live in lib/api.ts (StatsApi, toDashboardStats).
+
+export interface OutcomeShare {
+  outcome: Outcome;
+  count: number;
+}
+
+export interface CategoryFeedback {
+  category: string;
+  useful: number;
+  incorrect: number;
+  unresolved: number;
+  rated: number;              // useful + incorrect + unresolved
+  usefulRate: number | null;  // null when nothing was rated: never shown as 0%
+}
+
+/** Measured from historical ticket timestamps (created -> resolved). */
+export interface MttrBaseline {
+  medianHours: number;
+  meanHours: number | null;
+  tickets: number;
+  byPriority: { priority: string; medianHours: number; tickets: number }[];
+}
+
+/** An ESTIMATE with stated assumptions: never shown as an observed value (docs/DATA-CARD.md). */
+export interface MttrAssisted {
+  medianHours: number;
+  assumptions: string[];
+}
+
+export interface DashboardStats {
+  analyses: number;
+  outcomes: OutcomeShare[];           // always all four outcomes, in OUTCOMES order
+  categories: CategoryFeedback[];
+  mttrBaseline: MttrBaseline | null;  // null = not available yet
+  mttrAssisted: MttrAssisted | null;  // null = not available yet
+}
