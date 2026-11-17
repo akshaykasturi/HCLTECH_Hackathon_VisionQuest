@@ -50,9 +50,23 @@ def test_a_blocked():
     assert (d.outcome, d.reasons, d.confidence) == ("BLOCKED", ["INJECTION_PATTERN"], 0.0)
 
 
-def test_b_safety_escalates_to_the_safety_group():
-    d = run(screen=ScreenResult(safety=True, codes=["SAFETY_SMOKE"]))
-    assert (d.outcome, d.reasons, d.escalation_group) == ("ESCALATE", ["SAFETY"], "Desktop Support L2 (safety)")
+def test_b_safety_escalates_with_the_screen_codes_as_reasons():
+    d = run(screen=ScreenResult(safety=True, codes=["SAFETY_SMOKE", "SAFETY_BURNING"]))
+    assert (d.outcome, d.reasons, d.escalation_group) == \
+        ("ESCALATE", ["SAFETY_SMOKE", "SAFETY_BURNING"], "Desktop Support L2 (safety)")
+    for code in ("PRIVILEGED_REQUEST", "REGULATED_LEGAL", "REPEATED_FAILURE"):  # a person must decide
+        assert run(screen=ScreenResult(safety=True, codes=[code])).reasons == [code]
+    assert run(screen=ScreenResult(safety=True)).reasons == ["SAFETY"]  # no code given: the generic reason
+
+
+def test_c_counts_unique_words_so_a_repeated_subject_is_vague():
+    assert gate.unique_words("Partner API errors | Partner API errors.") == 3
+    assert gate.unique_words("VPN won't connect, error 809!") == 6      # won't -> won + t; punctuation stripped
+    assert gate.unique_words("Error ERROR error_809") == 2             # case-insensitive; _ splits words
+    d = run(t=ticket(subject="Partner API errors", description="Partner API errors."))
+    assert (d.outcome, d.reasons) == ("CLARIFY", ["TOO_VAGUE"])  # 6 words before, but only 3 distinct
+    d = run(t=ticket(subject="Partner API errors", description="Partner API returns 429 since 09:00."))
+    assert d.reasons != ["TOO_VAGUE"]  # new detail: enough distinct words
 
 
 def test_c_too_vague_asks_for_details():

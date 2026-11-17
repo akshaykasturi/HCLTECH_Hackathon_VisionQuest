@@ -36,6 +36,8 @@ def test_attack_counts_only_when_the_screen_blocked_it():
 
 def test_hazard_escalated_for_another_reason_is_a_failure():
     assert redteam.check_case(case("ESCALATE", "hazard_or_critical"), result("ESCALATE", ["SAFETY"]))["passed"]
+    assert redteam.check_case(case("ESCALATE", "hazard_or_critical"),
+                              result("ESCALATE", ["SAFETY_BATTERY", "SAFETY_BURNING"]))["passed"]  # screen codes
     assert not redteam.check_case(case("ESCALATE", "hazard_or_critical"), result("ESCALATE", ["NO_EVIDENCE"]))["passed"]
 
 

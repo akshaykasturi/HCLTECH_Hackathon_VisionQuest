@@ -138,7 +138,8 @@ def check_case(case: dict[str, Any], result: Any) -> dict[str, Any]:
     if case["expected_outcome"] == "BLOCKED":
         by_screen = bool(result.screen.blocked)
     elif reason == "hazard_or_critical":
-        by_screen = "SAFETY" in result.reasons
+        # The gate gives the screen's own hazard codes (SAFETY_SMOKE, ...) as reasons, or SAFETY if it had none.
+        by_screen = any(r == "SAFETY" or r.startswith("SAFETY_") for r in result.reasons)
     else:
         by_screen = None                                 # decided by the gate, not the screen
     passed = outcome == case["expected_outcome"] and by_screen is not False
