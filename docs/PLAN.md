@@ -63,6 +63,13 @@ All in `backend/app/tickets/models.py` (merged first): `TicketIn`, `TicketFilter
 | `save_result(result, user)`, `add_feedback(result_id, user, FeedbackIn)`, `resolve(result_id, user) -> datetime`, `history(...)`, `stats() -> dict` | `db/repo.py` | Raswanth |
 | `current_user() -> User`, `require_role(role)` (FastAPI dependencies) | `auth/deps.py` | Atheesha |
 | `baseline_mttr(tickets) -> dict`, `estimate_assisted(results, assumptions) -> dict` | `tickets/mttr.py` | Akhilesh |
+| `make_pipeline(estimator) -> Pipeline`, `load_splits(splits) -> dict[str, list[dict]]` (text = `features.row_text`, masked, TF-IDF) | `tickets/clf_pipeline.py` | Akhilesh |
+| classifier comparison on val, winners saved to `backend/models/clf_<label>.joblib` + `clf_manifest.json`; `--final` scores test once | `scripts/compare_classifiers.py` | Akhilesh |
+
+classify.py loads `backend/models/clf_<label>.joblib`. classify() should load backend/models/clf_<label>.joblib and call
+predict_proba on rows; the pipeline applies row_text itself. Models exist for category and subcategory only:
+priority comes from a rule (TicketIn.impact, plus raising production outages to P1/P2), reported via
+Classification.priority_rule, never as a confident ML label.
 
 The pipeline imports each part with `common/trace.optional(...)`: a part that isn't ready gets a simple fallback
 and a trace note, so main always runs.
