@@ -35,7 +35,9 @@ def is_strict(preset: dict) -> bool:
 def matches(preset: dict, outcome: str, reasons: list[str]) -> bool:
     """Right outcome for the right reason (the expected reason code must be among the reasons)."""
     reason = preset.get("expected_reason")
-    return outcome == preset["expected_outcome"] and (reason is None or reason in reasons)
+    # SAFETY also matches the screen's specific hazard codes (SAFETY_SMOKE, ...), which the gate now reports.
+    found = reason is None or any(r == reason or (reason == "SAFETY" and r.startswith("SAFETY_")) for r in reasons)
+    return outcome == preset["expected_outcome"] and found
 
 
 def main() -> int:

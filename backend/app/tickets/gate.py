@@ -46,7 +46,13 @@ DEFAULTS: dict[str, Any] = {
 }
 GENERIC_QUESTION = ("Is this mainly about {a} or {b}? Please add the exact error message and the affected "
                     "application or device.")
-_WORD = re.compile(r"\w+")
+_WORD = re.compile(r"[^\W_]+")  # letters and digits; punctuation and underscores split words
+
+
+def unique_words(text: str) -> int:
+    """Distinct words, lower-cased, punctuation stripped. A description that only repeats the subject
+    ("Partner API errors | Partner API errors.") adds nothing, so it counts once: 3, not 6."""
+    return len({w.lower() for w in _WORD.findall(text)})
 
 
 @lru_cache(maxsize=1)
@@ -116,12 +122,13 @@ def decide(ticket: TicketIn, screen: ScreenResult, classification: Optional[Clas
     # a. An attack on the assistant: stop here.
     if screen.blocked:
         return GateDecision(outcome="BLOCKED", reasons=list(screen.codes), confidence=0.0)
-    # b. A safety hazard: a person, now.
+    # b. A safety hazard or something a person must decide: the screen's own codes are the reason
+    #    (e.g. SAFETY_SMOKE, PRIVILEGED_REQUEST), so the analyst sees WHY; SAFETY if it gave none.
     if screen.safety:
-        return GateDecision(outcome="ESCALATE", reasons=[SAFETY], confidence=confidence,
+        return GateDecision(outcome="ESCALATE", reasons=list(screen.codes) or [SAFETY], confidence=confidence,
                             escalation_group=p["safety_group"])
-    # c. Too short to work with.
-    if len(_WORD.findall(f"{ticket.subject} {ticket.description}")) < p["min_words"]:
+    # c. Too little to work with: fewer than min_words DISTINCT words in subject + description.
+    if unique_words(f"{ticket.subject} {ticket.description}") < p["min_words"]:
         return clarify(TOO_VAGUE, p["vague_question"])
     # d. Neither a classifier result nor a strong match.
     if classification is None and not strong:
