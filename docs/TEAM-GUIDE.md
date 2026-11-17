@@ -50,6 +50,31 @@ You need Git, Python 3.12, Node.js 20.19 or newer, and Claude Code.
    claude
    ```
 
+## Certificate error when downloading the embedding model
+
+On some networks (antivirus or a proxy that inspects HTTPS), the first run of anything that uses embeddings
+(`scripts\embed_tickets.py`, hybrid search) fails with `CERTIFICATE_VERIFY_FAILED ... unable to get local issuer
+certificate` while downloading `BAAI/bge-small-en-v1.5` (about 65 MB). Windows already trusts that network's
+certificate; Python's download library doesn't look in the Windows list. Point it there for one run, from `backend`:
+
+```powershell
+# 1. Export the certificates Windows trusts to a file OUTSIDE the repo
+$pem = "$env:TEMP\win_ca.pem"
+.\.venv\Scripts\python.exe -c "import ssl,sys; open(sys.argv[1],'w').write(''.join(ssl.DER_cert_to_PEM_cert(c) for s in ('ROOT','CA') for c,e,t in ssl.enum_certificates(s) if e=='x509_asn'))" $pem
+
+# 2. Use them for this terminal only, run the script, then remove the setting again
+$env:REQUESTS_CA_BUNDLE = $pem; $env:SSL_CERT_FILE = $pem
+.\.venv\Scripts\python.exe scripts\embed_tickets.py
+Remove-Item Env:REQUESTS_CA_BUNDLE, Env:SSL_CERT_FILE
+```
+
+The model is then cached in `backend\.cache\fastembed` (git-ignored) and later runs work without these steps.
+Certificate checking stays on the whole time: never turn it off, and never put these settings in `.env` or in code.
+Keep the double quotes around the Python code exactly as shown: Windows PowerShell drops double quotes inside it.
+
+`pip install` failing with the same error? Upgrade pip once with the same file: pip 24.2 and newer reads the
+Windows list by itself. `.\.venv\Scripts\python.exe -m pip install --cert $pem --upgrade pip`
+
 ## Every task: the loop
 
 1. **Start**: in Claude Code, `/start-task <branch-name> <what to build>`.
