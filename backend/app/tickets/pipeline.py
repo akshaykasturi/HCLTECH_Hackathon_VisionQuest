@@ -20,16 +20,16 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 from app.common.redact import mask
 from app.common.trace import Trace, optional
-from app.tickets.gate import decide, gate_policy
+from app.tickets.gate import decide, escalation_group_for, gate_policy
 from app.tickets.guard import mask_ticket
 from app.tickets.models import (AnalysisResult, Classification, GateDecision, KBHit, Recommendation, ScreenResult,
                                 SimilarTicket, Step, TicketIn, User)
 from app.tickets.screen import screen
-from app.tickets.similar import search_similar
+from app.tickets.similar import get_ticket_index, search_similar
 
 logger = logging.getLogger(__name__)
 
@@ -45,22 +45,38 @@ def _err(exc: BaseException) -> str:
     return exc.__class__.__name__  # never the message: it could quote ticket text
 
 
-def _escalation_group(classification: Optional[Classification]) -> str:
-    p = gate_policy()
+def data_escalation_groups() -> dict[str, str]:
+    """{category: majority assigned_team} learned from the ticket index ({} if it cannot be built)."""
+    try:
+        return dict(get_ticket_index().teams_by_category)
+    except Exception as exc:
+        logger.warning("escalation teams from data unavailable (%s)", _err(exc))
+        return {}
+
+
+def _escalation_group(classification: Optional[Classification], groups: dict[str, str]) -> str:
     label = classification.category.label if classification is not None else None
-    return (p["escalation_groups"].get(label) if label else None) or p["default_group"]
+    return escalation_group_for(label, {**gate_policy(), "data_escalation_groups": groups})
+
+
+def _steps_of(ticket: SimilarTicket) -> list[str]:
+    text = ticket.resolution_text or ""
+    if "Steps:" not in text:
+        return []
+    return [s.strip() for s in text.rsplit("Steps:", 1)[1].split(" | ") if s.strip()]
 
 
 def template_recommendation(similar: list[SimilarTicket]) -> Optional[Recommendation]:
-    """Steps copied word for word from the best strong past ticket (not a lookalike, score >= related_threshold).
+    """Steps copied word for word from the best strong past ticket (not a lookalike, score >= related_threshold)
+    that HAS resolution steps: open or in-progress tickets have none, so they are skipped, not a dead end.
     No LLM: each step's excerpt IS its text, so it is verbatim by construction. None if there is nothing to copy.
     `why` names the ticket but not the similarity score: the number check only allows numbers from the source."""
     threshold = gate_policy()["related_threshold"]
     strong = sorted((s for s in similar if not s.lookalike and s.score >= threshold), key=lambda s: -s.score)
-    if not strong or not strong[0].resolution_text or "Steps:" not in strong[0].resolution_text:
+    best = next((s for s in strong if _steps_of(s)), None)
+    if best is None:
         return None
-    best = strong[0]
-    texts = [s.strip() for s in best.resolution_text.rsplit("Steps:", 1)[1].split(" | ") if s.strip()]
+    texts = _steps_of(best)
     why = f"Resolved ticket {best.ticket_id} (match: {best.match.replace('_', ' ')})"
     steps = [Step(text=s, source_id=best.ticket_id, excerpt=s, why=why) for s in texts]
     if not steps:
@@ -108,8 +124,10 @@ def _write_steps(masked: TicketIn, classification: Optional[Classification], sim
         return checked, list(findings)
 
 
-def analyze(ticket: TicketIn, user: User) -> AnalysisResult:
-    """Run steps 1-7 for one ticket. Never returns raw text; raises only if masking fails."""
+def analyze(ticket: TicketIn, user: User, exclude_ticket_ids: Iterable[str] = ()) -> AnalysisResult:
+    """Run steps 1-7 for one ticket. Never returns raw text; raises only if masking fails.
+    exclude_ticket_ids: past tickets similar search must not return. Presets and evaluations pass the source
+    ticket's own id (leave-one-out): it is in the index, and finding itself would fake a perfect match."""
     trace = Trace()
     result_id = uuid.uuid4().hex
     created_at = ticket.created_at or _now()
@@ -155,7 +173,7 @@ def analyze(ticket: TicketIn, user: User) -> AnalysisResult:
     # ---- Steps 3-5 -------------------------------------------------------------------------------
     if screen_result is None:
         decision = GateDecision(outcome="ESCALATE", reasons=[SCREEN_ERROR], confidence=0.0,
-                                escalation_group=_escalation_group(None))
+                                escalation_group=_escalation_group(None, {}))
     elif screen_result.blocked:
         with trace.step("gate") as note:
             decision = decide(masked, screen_result, None, [], [])
@@ -164,7 +182,7 @@ def analyze(ticket: TicketIn, user: User) -> AnalysisResult:
         query = f"{masked.subject}. {masked.description}"
         with trace.step("similar") as note:
             similar = search_similar(query, category_hint=classification.category.label if classification else None,
-                                     affected_service=masked.affected_service)
+                                     affected_service=masked.affected_service, exclude_ticket_ids=exclude_ticket_ids)
             note["detail"] = (f"{len(similar)} found, best {similar[0].score:.2f} ({similar[0].match})"
                               if similar else "nothing found")
         with trace.step("kb") as note:
@@ -177,8 +195,10 @@ def analyze(ticket: TicketIn, user: User) -> AnalysisResult:
                     note["detail"] = f"{len(kb)} sections"
                 except Exception as exc:
                     note["detail"] = f"kb search failed ({_err(exc)}): no KB sections"
+        groups = data_escalation_groups()
         with trace.step("gate") as note:
-            decision = decide(masked, screen_result, classification, similar, kb)
+            decision = decide(masked, screen_result, classification, similar, kb,
+                              policy={"data_escalation_groups": groups})
             note["detail"] = f"{decision.outcome}: {', '.join(decision.reasons)}"
 
         if decision.outcome == "RECOMMEND":
@@ -186,7 +206,7 @@ def analyze(ticket: TicketIn, user: User) -> AnalysisResult:
             if recommendation is None or not recommendation.steps:
                 decision = GateDecision(outcome="ESCALATE", reasons=decision.reasons + [NO_VERIFIED_STEPS],
                                         confidence=decision.confidence,
-                                        escalation_group=_escalation_group(classification))
+                                        escalation_group=_escalation_group(classification, groups))
                 recommendation = None
 
     # ---- Step 6: the result (masked data only) ---------------------------------------------------

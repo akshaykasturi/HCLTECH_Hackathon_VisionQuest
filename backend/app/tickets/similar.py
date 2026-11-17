@@ -1,8 +1,12 @@
 """Step 3a: find similar past tickets (FR-02). Hybrid search, same approach as common/doc_search.py.
 
-  index:    one past ticket = one unit (tickets are not chunked). Only train + val tickets go in: test
-            tickets are the exam questions for the evaluation, so they must never be in the index.
+  index:    one past ticket = one unit (tickets are not chunked). ALL splits go in (train, val, test): at run
+            time every past ticket is history. Leakage is prevented another way: duplicate groups never cross
+            splits (docs/DATA-CARD.md), and every evaluation or preset run excludes the query ticket itself
+            (exclude_ticket_ids, leave-one-out), so a ticket can never find its own answer.
             Every text field is masked (common/redact.mask) before it is indexed or stored.
+  teams:    the index also learns, per category, which assigned_team handles most of its tickets; the gate
+            escalates there (data first, policy.yaml overrides, then the default group).
   BM25:     keyword score over subject + description + affected_service (policy.yaml similar.index_fields).
             Good at exact codes ("809").
   dense:    meaning score: cosine of embeddings (common/embed.py). Good at paraphrases ("tunnel won't
@@ -27,7 +31,8 @@ import csv
 import logging
 import os
 import re
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -79,6 +84,7 @@ class TicketIndex:
     bm25: Optional[BM25Okapi]            # None when the index is empty
     vectors: Optional[np.ndarray]        # (n, dim) unit length; None = BM25 only
     embed: Optional[Embed]
+    teams_by_category: dict[str, str] = field(default_factory=dict)   # majority assigned_team per category
 
     @property
     def mode(self) -> str:
@@ -117,10 +123,23 @@ def _default_embed() -> Optional[Embed]:
         return None
 
 
-def build_ticket_index(rows: Optional[list[dict[str, Any]]] = None, splits: Iterable[str] = ("train", "val"),
+def majority_teams(rows: Iterable[dict[str, Any]]) -> dict[str, str]:
+    """{category: the assigned_team with the most tickets in it}. A tie goes to the alphabetically first team,
+    so the answer never depends on row order."""
+    counts: dict[str, Counter[str]] = {}
+    for r in rows:
+        category, team = (r.get("category") or "").strip(), (r.get("assigned_team") or "").strip()
+        if category and team:
+            counts.setdefault(category, Counter())[team] += 1
+    return {c: min(t, key=lambda team: (-t[team], team)) for c, t in counts.items()}
+
+
+def build_ticket_index(rows: Optional[list[dict[str, Any]]] = None,
+                       splits: Iterable[str] = ("train", "val", "test"),
                        embed: Optional[Embed] = None) -> TicketIndex:
-    """Index the tickets of the given splits (default train + val; never test). `embed` overrides the
-    model (tests pass a fake). To tune on val without the answers in the index, use splits=("train",)."""
+    """Index the tickets of the given splits (default: all; at run time every ticket is history).
+    `embed` overrides the model (tests pass a fake). Evaluations exclude the query ticket itself with
+    search_similar(exclude_ticket_ids=...); duplicate groups never cross splits, so nothing else leaks."""
     wanted = set(splits)
     rows = read_rows() if rows is None else rows
     kept = [_mask_row(r) for r in rows if (r.get("split") or "").strip() in wanted]
@@ -140,7 +159,8 @@ def build_ticket_index(rows: Optional[list[dict[str, Any]]] = None, splits: Iter
         except Exception as exc:
             logger.warning("similar tickets: embedding failed (%s); using BM25 only", type(exc).__name__)
             embed = None
-    return TicketIndex(kept, [set(t) for t in tokens], bm25, vectors, embed if vectors is not None else None)
+    return TicketIndex(kept, [set(t) for t in tokens], bm25, vectors, embed if vectors is not None else None,
+                       majority_teams(kept))
 
 
 @lru_cache(maxsize=1)
@@ -148,6 +168,8 @@ def get_ticket_index() -> TicketIndex:
     """The index over the tickets CSV, built once per process. Also the startup warm-up."""
     idx = build_ticket_index()
     logger.info("similar tickets index ready: %d tickets, mode %s", len(idx.rows), idx.mode)
+    if idx.teams_by_category:
+        logger.info("escalation teams from data: %s", idx.teams_by_category)
     return idx
 
 
@@ -236,20 +258,25 @@ def resolution_text(row: dict[str, Any]) -> Optional[str]:
 
 def search_similar(query: str, k: int = 5, filters: Optional[TicketFilters] = None,
                    category_hint: Optional[str] = None, affected_service: Optional[str] = None,
-                   method: str = "auto", index: Optional[TicketIndex] = None) -> list[SimilarTicket]:
+                   method: str = "auto", index: Optional[TicketIndex] = None,
+                   exclude_ticket_ids: Iterable[str] = ()) -> list[SimilarTicket]:
     """Top k similar past tickets for an (already masked) ticket text.
 
     method: "auto" (hybrid if embeddings are available, else BM25), "hybrid", "bm25" or "dense"
     (the last three for evaluation; "hybrid"/"dense" without embeddings raise RuntimeError).
     category_hint: the classifier's category, used to flag lookalikes.
     affected_service: the new ticket's service; same-service tickets get policy service_bonus.
+    exclude_ticket_ids: never returned, removed before ranking. Evaluations and presets pass the query's own
+    ticket_id here (leave-one-out): the index holds every ticket, so otherwise a ticket would find itself.
     """
     if method not in METHODS:
         raise ValueError(f"unknown method {method!r}; use one of {METHODS}")
     idx = index or get_ticket_index()
     if not idx.rows or idx.bm25 is None or k <= 0:
         return []
-    keep = [i for i, row in enumerate(idx.rows) if _passes(row, filters)]
+    excluded = {str(t) for t in exclude_ticket_ids}
+    keep = [i for i, row in enumerate(idx.rows)
+            if str(row.get("ticket_id")) not in excluded and _passes(row, filters)]
     if not keep:
         return []
 
@@ -329,8 +356,9 @@ def search_similar(query: str, k: int = 5, filters: Optional[TicketFilters] = No
 
 def retrieval_eval(queries: list[dict[str, Any]], index: TicketIndex, k: int = 5,
                    methods: Iterable[str] = ("bm25", "dense", "hybrid")) -> dict[str, dict[str, Any]]:
-    """Compare retrieval methods on held-out tickets (rows with the CSV fields, e.g. the test split).
+    """Compare retrieval methods on evaluation tickets (rows with the CSV fields, e.g. the test split).
 
+    Leave-one-out: the index holds every ticket, so each query is searched with its own ticket_id excluded.
     Relevant = index tickets with the same dup_group_id as the query (the query itself excluded);
     queries whose group has nothing in the index are skipped. Per method:
       recall_at_k          share of the relevant tickets found in the top k, averaged over queries
@@ -356,8 +384,8 @@ def retrieval_eval(queries: list[dict[str, Any]], index: TicketIndex, k: int = 5
             relevant = groups.get(str(q.get("dup_group_id") or ""), set()) - {qid}
             if not relevant:
                 continue
-            hits = [h for h in search_similar(index_text(q), k=k + 1, affected_service=q.get("affected_service"),
-                                              method=method, index=index) if h.ticket_id != qid][:k]
+            hits = search_similar(index_text(q), k=k, affected_service=q.get("affected_service"),
+                                  method=method, index=index, exclude_ticket_ids=[qid])
             ids = [h.ticket_id for h in hits]
             recalls.append(len(relevant & set(ids)) / len(relevant))
             rrs.append(next((1 / r for r, t in enumerate(ids, start=1) if t in relevant), 0.0))

@@ -8,7 +8,8 @@ import pytest
 from app.common.report_checks import Finding
 from app.tickets import pipeline
 from app.tickets.checks import check_recommendation
-from app.tickets.models import Classification, KBHit, Recommendation, SimilarTicket, Step, TicketIn, User
+from app.tickets.models import (Classification, KBHit, LabelScore, Recommendation, SimilarTicket, Step, TicketIn,
+                                User)
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "sample_evidence.json").read_text(encoding="utf-8"))
 USER = User(username="ana", role="analyst")
@@ -41,9 +42,12 @@ def calls(monkeypatch):
     def fake_search(query, **kwargs):
         c.names.append("search")
         c.queries.append(query)
+        c.search_kwargs = kwargs
         return similar_tickets()
 
     monkeypatch.setattr(pipeline, "search_similar", fake_search)
+    # teams learned from the data (the real index is not built in unit tests)
+    monkeypatch.setattr(pipeline, "data_escalation_groups", lambda: {"Network": "Network Operations"})
     return c
 
 
@@ -260,6 +264,46 @@ def test_trace_notes_never_contain_ticket_text(monkeypatch, calls):
 def test_presets_are_valid_tickets():
     presets = json.loads((Path(pipeline.__file__).with_name("presets.json")).read_text(encoding="utf-8"))
     assert {p["expected_outcome"] for p in presets} == {"RECOMMEND", "CLARIFY", "ESCALATE", "BLOCKED"}
+    assert len(presets) == 5 and any(p.get("expected_reason") == "SAFETY" for p in presets)
     for p in presets:
         TicketIn(**p["ticket"])
-        assert p["id"] and p["label"] and p["why"]
+        assert p["id"] and p["label"] and p["why"] and p["expected_reason"]
+        assert "source_ticket_id" in p and "case_id" in p  # where it came from (null for authored cases)
+
+
+# ---- Real-data fixes ------------------------------------------------------------------------------
+
+def test_exclude_ticket_ids_reach_the_search(monkeypatch, calls):
+    install(monkeypatch, calls, classify=classify)
+    pipeline.analyze(ticket(), USER, exclude_ticket_ids=["INC-100005"])
+    assert list(calls.search_kwargs["exclude_ticket_ids"]) == ["INC-100005"]
+    pipeline.analyze(ticket(), USER)
+    assert list(calls.search_kwargs["exclude_ticket_ids"]) == []
+
+
+def test_template_skips_a_strong_match_without_steps():
+    open_ticket = SimilarTicket(ticket_id="INC-OPEN", subject="VPN error 809", category="Network",
+                                status="open", score=0.95, match="likely_duplicate",
+                                resolution_text=None)  # open: no resolution steps yet
+    resolved = similar_tickets()[0]                       # 0.81, has steps
+    rec = pipeline.template_recommendation([open_ticket, resolved])
+    assert rec is not None and {s.source_id for s in rec.steps} == {"INC10432"}
+    notes_only = open_ticket.model_copy(update={"resolution_text": "Looked at it, no fix yet."})
+    assert pipeline.template_recommendation([notes_only]) is None
+
+
+def test_escalation_group_comes_from_the_data(monkeypatch, calls):
+    monkeypatch.setattr(pipeline, "data_escalation_groups", lambda: {"Network": "Workplace IT (from data)"})
+    def low(t):
+        return classify(t).model_copy(update={"category": LabelScore(label="Network", prob=0.5)})
+    install(monkeypatch, calls, classify=low)
+    r = pipeline.analyze(ticket(), USER)
+    assert (r.outcome, r.escalation_group) == ("ESCALATE", "Workplace IT (from data)")
+
+
+def test_data_teams_are_learned_from_the_index(monkeypatch):
+    from app.tickets.similar import build_ticket_index
+    rows = [{"ticket_id": f"T{i}", "split": "train", "subject": "s", "description": "d", "category": "Network",
+             "assigned_team": team} for i, team in enumerate(["Network Operations"] * 2 + ["Workplace IT"])]
+    monkeypatch.setattr(pipeline, "get_ticket_index", lambda: build_ticket_index(rows))
+    assert pipeline.data_escalation_groups() == {"Network": "Network Operations"}

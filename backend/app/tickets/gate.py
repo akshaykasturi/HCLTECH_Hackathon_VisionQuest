@@ -41,7 +41,7 @@ LOW_CONFIDENCE = "LOW_CONFIDENCE"        # some evidence, but not enough to reco
 DEFAULTS: dict[str, Any] = {
     "min_words": 5, "ood_threshold": 0.55, "ambiguity_margin": 0.10, "conflict_margin": 0.05,
     "min_class_prob": 0.60, "safety_group": "Desktop Support L2 (safety)", "default_group": "Service Desk L2",
-    "escalation_groups": {}, "vague_question": "Please describe what you were doing, the exact error message, "
+    "escalation_groups": {}, "data_escalation_groups": {}, "vague_question": "Please describe what you were doing, the exact error message, "
     "and which application or device is affected.", "clarify_questions": {},
 }
 GENERIC_QUESTION = ("Is this mainly about {a} or {b}? Please add the exact error message and the affected "
@@ -69,6 +69,16 @@ def _question(a: str, b: str, p: dict[str, Any]) -> str:
     return p["clarify_questions"].get(f"{first}|{second}") or GENERIC_QUESTION.format(a=first, b=second)
 
 
+def escalation_group_for(category: Optional[str], p: dict[str, Any]) -> str:
+    """Who takes an escalated ticket: policy.yaml escalation_groups (a deliberate override) first, then the team
+    that handles most tickets of this category in the data (p["data_escalation_groups"], passed in by the
+    pipeline from the ticket index), then default_group. No category -> default_group."""
+    if not category:
+        return p["default_group"]
+    return (p["escalation_groups"].get(category) or p["data_escalation_groups"].get(category)
+            or p["default_group"])
+
+
 def _majority_category(strong: list[SimilarTicket]) -> str:
     """Most common category among the strong matches; a tie goes to the best-scoring one's category."""
     counts = Counter(_norm(s.category) for s in strong)
@@ -78,7 +88,8 @@ def _majority_category(strong: list[SimilarTicket]) -> str:
 
 def decide(ticket: TicketIn, screen: ScreenResult, classification: Optional[Classification],
            similar: list[SimilarTicket], kb: list[KBHit], policy: Optional[dict[str, Any]] = None) -> GateDecision:
-    """RECOMMEND / CLARIFY / ESCALATE / BLOCKED with reason codes. `policy` overrides policy.yaml keys (tests).
+    """RECOMMEND / CLARIFY / ESCALATE / BLOCKED with reason codes. `policy` overrides policy.yaml keys (tests),
+    and carries data_escalation_groups (majority team per category) from the pipeline, so decide stays pure.
     `kb` is accepted for the fixed signature; KB hits support the steps later but do not change the outcome."""
     p = {**gate_policy(), **(policy or {})}
 
@@ -96,9 +107,8 @@ def decide(ticket: TicketIn, screen: ScreenResult, classification: Optional[Clas
 
     def escalate(reason: str) -> GateDecision:
         label = classification.category.label if classification is not None else None
-        group = p["escalation_groups"].get(label) if label else None
         return GateDecision(outcome="ESCALATE", reasons=[reason], confidence=confidence,
-                            escalation_group=group or p["default_group"])
+                            escalation_group=escalation_group_for(label, p))
 
     def clarify(reason: str, question: str) -> GateDecision:
         return GateDecision(outcome="CLARIFY", reasons=[reason], confidence=confidence, question=question)

@@ -34,9 +34,13 @@ KB = [KBHit(**k) for k in FIXTURE["kb"]]
 CLEAN = ScreenResult()
 
 
+DATA_TEAMS = {"Network": "Network Operations", "Identity & Access": "IAM Engineering"}  # as the pipeline passes
+
+
 def run(t=None, screen=CLEAN, cls="default", sim=None, policy=None):
     return decide(t or ticket(), screen, classification() if cls == "default" else cls,
-                  similar() if sim is None else sim, KB, policy=policy)
+                  similar() if sim is None else sim, KB,
+                  policy={"data_escalation_groups": DATA_TEAMS, **(policy or {})})
 
 
 # ---- One test per rule ------------------------------------------------------------------------
@@ -69,14 +73,15 @@ def test_e_nothing_similar(sim):
 
 
 def test_f_two_likely_issues_uses_the_policy_question_or_the_template():
-    d = run(cls=classification(prob=0.48, top3=[("Network", 0.48), ("Access", 0.42), ("Software", 0.1)]))
+    d = run(cls=classification(prob=0.48, top3=[("Network", 0.48), ("Identity & Access", 0.42), ("Cloud", 0.1)]))
     assert (d.outcome, d.reasons, d.question) == ("CLARIFY", ["TWO_LIKELY_ISSUES"], ACCESS_NETWORK_Q)
     d = run(cls=classification(label="Software", prob=0.45, top3=[("Software", 0.45), ("Hardware", 0.40)]))
     assert d.question.startswith("Is this mainly about Hardware or Software?")
 
 
 def test_g_sources_disagree():
-    d = run(cls=classification(label="Access", prob=0.9, top3=[("Access", 0.9), ("Network", 0.05)]))
+    d = run(cls=classification(label="Identity & Access", prob=0.9,
+                               top3=[("Identity & Access", 0.9), ("Network", 0.05)]))
     assert (d.outcome, d.reasons, d.question) == ("CLARIFY", ["SOURCES_DISAGREE"], ACCESS_NETWORK_Q)
 
 
@@ -137,6 +142,18 @@ def test_lookalikes_never_count_as_strong():
 
 def test_policy_file_is_read():
     p = gate_policy()
-    assert p["escalation_groups"]["Network"] == "Network Operations"
-    assert p["clarify_questions"]["Access|Network"] == ACCESS_NETWORK_Q
+    assert p["escalation_groups"] == {}  # teams come from the data unless overridden on purpose
+    assert p["clarify_questions"]["Identity & Access|Network"] == ACCESS_NETWORK_Q
     assert p["related_threshold"] == 0.70 and gate.DEFAULTS["min_words"] == p["min_words"]
+
+
+def test_escalation_group_comes_from_data_then_policy_override_then_default():
+    low = classification(prob=0.5, top3=[("Network", 0.5), ("Cloud", 0.2)])
+    assert run(cls=low).escalation_group == "Network Operations"                       # data
+    override = {"escalation_groups": {"Network": "NOC night shift"}}
+    assert run(cls=low, policy=override).escalation_group == "NOC night shift"        # policy wins
+    unknown = classification(label="Quantum Lab", prob=0.5, top3=[("Quantum Lab", 0.5), ("Cloud", 0.2)])
+    only_weak = [SimilarTicket(**{**FIXTURE["similar"][1], "score": 0.6})]          # no strong match to disagree
+    assert run(cls=unknown, sim=only_weak).escalation_group == "Service Desk L2"      # default
+    assert gate.escalation_group_for(None, {**gate_policy(), "data_escalation_groups": DATA_TEAMS}) \
+        == "Service Desk L2"
