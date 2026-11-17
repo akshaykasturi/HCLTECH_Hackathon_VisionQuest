@@ -1,0 +1,239 @@
+{
+  "generated_at": "2026-11-17 09:00 UTC",
+  "split": "val",
+  "tickets": 10,
+  "answered": 10,
+  "providers": {
+    "gemini": 7,
+    "groq": 3
+  },
+  "steps_written": 38,
+  "steps_kept": 31,
+  "step_groundedness": 0.8158,
+  "tickets_verified": 10,
+  "tickets_empty_answer": 0,
+  "why_dropped": {
+    "NUMBER_NOT_IN_EVIDENCE": 4,
+    "UNSAFE_STEP": 3
+  },
+  "warnings": {},
+  "median_ms": 2222,
+  "llm_errors": [
+    "gemini: HTTP 429: { \"error\": { \"code\": 429, \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://aistudio.google.com/docs/rate-li",
+    "gemini: HTTP 503: { \"error\": { \"code\": 503, \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\", \"status\": \"UNAVAILABLE\" } }",
+    "gemini: attempt 1: not valid JSON"
+  ],
+  "results": [
+    {
+      "case_id": "EVAL-00001",
+      "ticket_id": "INC-100005",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 4955,
+      "llm_errors": [
+        "gemini: attempt 1: not valid JSON"
+      ],
+      "written": 4,
+      "kept": 2,
+      "codes": [
+        "NUMBER_NOT_IN_EVIDENCE",
+        "NUMBER_NOT_IN_EVIDENCE"
+      ],
+      "dropped_examples": [
+        {
+          "codes": [
+            "NUMBER_NOT_IN_EVIDENCE"
+          ],
+          "text": "Check the partner's request rate against the plan limit.",
+          "source_id": "doc:kb/KB-020#4",
+          "excerpt": "Partner exceeding their rate limit"
+        },
+        {
+          "codes": [
+            "NUMBER_NOT_IN_EVIDENCE"
+          ],
+          "text": "Confirm the partner's errors drop.",
+          "source_id": "doc:kb/KB-020#4",
+          "excerpt": "Confirm the partner's errors drop"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00002",
+      "ticket_id": "INC-100006",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 2149,
+      "llm_errors": [],
+      "written": 4,
+      "kept": 4,
+      "codes": [],
+      "dropped_examples": [],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00004",
+      "ticket_id": "INC-100008",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 2155,
+      "llm_errors": [],
+      "written": 4,
+      "kept": 2,
+      "codes": [
+        "NUMBER_NOT_IN_EVIDENCE",
+        "NUMBER_NOT_IN_EVIDENCE"
+      ],
+      "dropped_examples": [
+        {
+          "codes": [
+            "NUMBER_NOT_IN_EVIDENCE"
+          ],
+          "text": "Check the partner's request rate against their plan limit.",
+          "source_id": "doc:kb/KB-020#4",
+          "excerpt": "Check the partner's request rate against the plan limit."
+        },
+        {
+          "codes": [
+            "NUMBER_NOT_IN_EVIDENCE"
+          ],
+          "text": "Confirm the partner's errors drop.",
+          "source_id": "doc:kb/KB-020#4",
+          "excerpt": "Confirm the partner's errors drop."
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00008",
+      "ticket_id": "INC-100012",
+      "evidence": 8,
+      "provider": "groq",
+      "ms": 4342,
+      "llm_errors": [
+        "gemini: HTTP 503: { \"error\": { \"code\": 503, \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\", \"status\": \"UNAVAILABLE\" } }"
+      ],
+      "written": 4,
+      "kept": 4,
+      "codes": [],
+      "dropped_examples": [],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00009",
+      "ticket_id": "INC-100013",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 2222,
+      "llm_errors": [],
+      "written": 4,
+      "kept": 4,
+      "codes": [],
+      "dropped_examples": [],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00012",
+      "ticket_id": "INC-100033",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 2006,
+      "llm_errors": [],
+      "written": 3,
+      "kept": 2,
+      "codes": [
+        "UNSAFE_STEP"
+      ],
+      "dropped_examples": [
+        {
+          "codes": [
+            "UNSAFE_STEP"
+          ],
+          "text": "Restart the monitoring agent service on the affected hosts.",
+          "source_id": "INC-100034",
+          "excerpt": "Restart the monitoring agent service"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00013",
+      "ticket_id": "INC-100034",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 1985,
+      "llm_errors": [],
+      "written": 3,
+      "kept": 2,
+      "codes": [
+        "UNSAFE_STEP"
+      ],
+      "dropped_examples": [
+        {
+          "codes": [
+            "UNSAFE_STEP"
+          ],
+          "text": "Restart the monitoring agent service on the affected hosts.",
+          "source_id": "INC-100033",
+          "excerpt": "Restart the monitoring agent service"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00014",
+      "ticket_id": "INC-100049",
+      "evidence": 8,
+      "provider": "groq",
+      "ms": 3474,
+      "llm_errors": [
+        "gemini: HTTP 429: { \"error\": { \"code\": 429, \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://aistudio.google.com/docs/rate-li"
+      ],
+      "written": 4,
+      "kept": 3,
+      "codes": [
+        "UNSAFE_STEP"
+      ],
+      "dropped_examples": [
+        {
+          "codes": [
+            "UNSAFE_STEP"
+          ],
+          "text": "Apply the shared\u2011device policy that automatically deletes profiles that have not been used for 30 days.",
+          "source_id": "INC-100344",
+          "excerpt": "Apply the shared-device policy that removes profiles unused for 30 days"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00015",
+      "ticket_id": "INC-100053",
+      "evidence": 8,
+      "provider": "groq",
+      "ms": 2471,
+      "llm_errors": [
+        "gemini: HTTP 429: { \"error\": { \"code\": 429, \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://aistudio.google.com/docs/rate-li"
+      ],
+      "written": 4,
+      "kept": 4,
+      "codes": [],
+      "dropped_examples": [],
+      "warnings": []
+    },
+    {
+      "case_id": "EVAL-00016",
+      "ticket_id": "INC-100054",
+      "evidence": 8,
+      "provider": "gemini",
+      "ms": 2152,
+      "llm_errors": [],
+      "written": 4,
+      "kept": 4,
+      "codes": [],
+      "dropped_examples": [],
+      "warnings": []
+    }
+  ]
+}

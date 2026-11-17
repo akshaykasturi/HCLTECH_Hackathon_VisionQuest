@@ -149,3 +149,32 @@ def test_evidence_holds_subject_and_resolution_and_kb_title():
     assert "VPN error 809 from home network" in by_id["INC10432"]
     assert "Reset the VPN client profile" in by_id["INC10432"]
     assert by_id["doc:kb/vpn-troubleshooting#2"].startswith("VPN error 809")
+
+
+@pytest.mark.parametrize("text", [
+    "Confirm the error rate drops.",
+    "Confirm dead tuples and query times drop.",
+    "Confirm the application recovered after the restart.",
+    "Ask affected users to flush their local DNS cache.",
+    "Confirm the account is disabled and the workflow is marked complete.",
+    "Confirm the termination workflow failed at the disable step.",
+    "Help the user move or delete large old items.",
+])
+def test_words_that_only_describe_or_check_are_not_unsafe(text):
+    from app.common.report_checks import check_safe_steps
+    from app.tickets.checks import _without_safe_user_actions
+    assert check_safe_steps(_without_safe_user_actions(text), "x") == []
+
+
+@pytest.mark.parametrize("text", [
+    "Drop the old orders table.",
+    "Confirm the rate drops, then drop the table.",
+    "Restart the VPN server.",
+    "Disable the account and revoke active sessions.",
+    "Roll back to the previous release.",
+    "Rotate the integration credential.",
+])
+def test_real_changes_are_still_unsafe(text):
+    from app.common.report_checks import check_safe_steps
+    from app.tickets.checks import _without_safe_user_actions
+    assert check_safe_steps(_without_safe_user_actions(text), "x") != []
