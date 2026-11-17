@@ -92,3 +92,56 @@ What-if table (scenarios, not results): share of tickets that get a RECOMMEND x 
 
 The assumptions are ours, not measured. Report the assisted MTTR as an estimate with this range, and replace the scenarios with the real useful rate once analysts have reviewed results.
 <!-- mttr:end -->
+
+<!-- eval-val:start -->
+## Pipeline evaluation (val, main as it is)
+
+200 labelled cases, `scripts/evaluate.py`, LLM off (template writer), nothing saved to the database. Tickets from tickets.csv are searched leave-one-out. Selection and tuning use val; test is scored once with --final.
+
+**Outcome accuracy:** 82.5% (95% CI 77.0%-87.5%)
+
+| Gold \ Got | RECOMMEND | CLARIFY | ESCALATE | BLOCKED | Recall |
+|---|---|---|---|---|---|
+| RECOMMEND | 118 | 7 | 26 | 0 | 78.1% |
+| CLARIFY | 2 | 23 | 0 | 0 | 92.0% |
+| ESCALATE | 0 | 0 | 14 | 0 | 100.0% |
+| BLOCKED | 0 | 0 | 0 | 10 | 100.0% |
+| Precision | 98.3% | 76.7% | 35.0% | 100.0% | |
+
+**Safety**
+
+- BLOCKED recall: 100.0%
+- RECOMMEND given where the gold outcome is not RECOMMEND: 4.1% (EVAL-00144, EVAL-00303)
+- Gold RECOMMEND cases that got another outcome (over-caution): 21.9%
+
+**Retrieval** (cases where search ran and gold labels exist)
+
+| Search | Cases | Recall@k | Hit@1 | Hit@k | MRR |
+|---|---|---|---|---|---|
+| Similar tickets (k=5, gold = same duplicate group) | 176 | 0.692 | 0.301 | 0.841 | 0.499 |
+| Similar tickets (k=5, gold = same root_cause) | 156 | 0.681 | 0.929 | 0.994 | 0.956 |
+| KB (k=3, gold = doc_id) | 177 | 0.966 | 0.938 | 0.966 | 0.951 |
+
+**Recommendations:** 120 (writer: template 120), mean 3.88 cited steps, 14 with check findings (UNSAFE_STEP 14).
+
+The duplicate-group gold is strict: a top match from the same scenario but another duplicate group counts as a miss. The same-root_cause row counts it as found (recall@5 there is capped because a root cause has more tickets than 5 slots).
+
+**Latency** (after warm-up): p50 77.4 ms, p95 236.7 ms.
+
+Gate reasons per gold reason (top 5):
+
+| Gold reason | Gate reasons given |
+|---|---|
+| credential_request | CREDENTIAL_REQUEST 2 |
+| data_exfiltration | DATA_EXFILTRATION 1 |
+| destructive_or_privileged_request | PRIVILEGED_REQUEST 4 |
+| evidence_available | DUPLICATE_FOUND 117, LOW_CONFIDENCE 26, TWO_LIKELY_ISSUES 7, STRONG_MATCH 1 |
+| harmful_request | HARMFUL_REQUEST 1 |
+| hazard_or_critical | SAFETY_BATTERY 2, SAFETY_BURNING 1, SAFETY_HEAT 1, SAFETY_SPARKS 1, SAFETY_CRITICAL_OUTAGE 1 |
+| insufficient_detail | TOO_VAGUE 23, DUPLICATE_FOUND 2 |
+| other_user_data | OTHER_USER_DATA 1 |
+| out_of_scope_no_evidence | LOW_CONFIDENCE 2 |
+| prompt_injection | INJECTION_PATTERN 5 |
+| regulated_or_legal | REGULATED_LEGAL 2 |
+| repeated_failure | REPEATED_FAILURE 1 |
+<!-- eval-val:end -->
