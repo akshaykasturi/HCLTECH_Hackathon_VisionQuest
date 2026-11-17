@@ -41,6 +41,22 @@ def client(monkeypatch, tmp_path):
     return TestClient(app)
 
 
+def test_an_employee_cannot_use_any_analyst_route(client):
+    client.app.dependency_overrides[current_user] = lambda: User(username="emma", role="employee")
+    calls = [("post", "/api/tickets/analyze", TICKET), ("get", "/api/tickets", None),
+             ("get", "/api/tickets/INC1", None), ("get", "/api/tickets/presets", None),
+             ("get", "/api/tickets/taxonomy", None), ("get", "/api/tickets/history", None),
+             ("get", "/api/tickets/stats", None),
+             ("post", "/api/tickets/results/abc123/feedback", {"verdict": "useful"}),
+             ("post", "/api/tickets/results/abc123/resolve", None)]
+    for method, path, body in calls:
+        r = client.request(method.upper(), path, json=body)
+        assert r.status_code == 403 and r.json()["error"]["code"] == "FORBIDDEN", path
+    client.app.dependency_overrides[current_user] = lambda: User(username="ana", role="analyst")
+    assert client.post("/api/tickets/analyze", json=TICKET).status_code == 200
+    assert client.get("/api/tickets/stats").status_code == 403  # lead only
+
+
 def test_analyze_returns_the_envelope_with_an_outcome(client):
     r = client.post("/api/tickets/analyze", json=TICKET)
     body = r.json()

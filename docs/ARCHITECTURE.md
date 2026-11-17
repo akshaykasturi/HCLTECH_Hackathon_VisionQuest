@@ -71,6 +71,35 @@ index: a click is an opinion, not a verified fix.
 | `GET /api/tickets/taxonomy` | analyst | categories, subcategories, priorities |
 | `/health`, `/health/ready`, `/api/audit/*` | public / lead | existing |
 
+Roles: `employee` < `analyst` < `lead`. Every `/api/tickets/*` route needs analyst or higher, so an employee gets 403.
+
+### Employee complaints: shared shapes (`backend/app/tickets/models.py`)
+
+An employee reports a problem in their own words. The same pipeline analyses it. The employee only ever sees
+a reference, a status and plain messages: never the analysis, the evidence or anyone else's ticket.
+
+| Shape | Fields | Notes |
+|---|---|---|
+| `ComplaintIn` | subject, description, affected_service?, impact?, category_hint? | `to_ticket()` -> `TicketIn` with channel `portal`; the employee cannot set channel or created_at |
+| `TicketIn` (added) | impact?, category_hint? | `impact`: `minor` / `slows_me_down` / `cannot_work` / `many_people`. `category_hint`: max 50, letters, digits and `& / , . ( ) ' + -` only (no `@` or `:`, so no email or key fits) |
+| `ComplaintReceipt` | reference, status, submitted_at, message, question? | the answer right after submitting; `question` only when status is `needs_info` |
+| `ComplaintSummary` | reference, subject (masked), status, submitted_at, resolved_at?, timeline [{event, at}] | "My requests"; timeline oldest first |
+
+`reference` looks like `CMP-2026-000123`. `status` is one of `received`, `needs_info`, `reviewed`, `resolved`.
+
+| Pipeline outcome | Employee status | Employee sees |
+|---|---|---|
+| CLARIFY | `needs_info` | the gate's one question |
+| RECOMMEND | `received` | "Received; IT is reviewing a suggested fix" (the steps go to the analyst, not the employee) |
+| ESCALATE | `received` | "Received; passed to the right team" |
+| BLOCKED | `received` | the same neutral message as any other request: nothing tells the sender it was blocked (logged masked for security review) |
+| analyst feedback saved | `reviewed` | timeline event |
+| analyst resolves | `resolved` | `resolved_at` + timeline event |
+
+**`category_hint` is stored and shown to the analyst, but never used in the decision.** The classifier and the
+gate decide from the text and the evidence; a reporter's guess must not steer them. `impact` is stored and shown
+too and does not change the gate today. Complaint routes are not built yet; they will use these shapes.
+
 ## Login
 
 Login returns a JWT (PyJWT, HS256, 8 h expiry, secret from `JWT_SECRET`). The frontend keeps it in
