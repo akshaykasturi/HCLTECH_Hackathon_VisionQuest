@@ -90,7 +90,7 @@ def check_one(case: dict[str, Any], generate_fn: Callable[..., Any]) -> dict[str
     if rec is None:
         return out
     out["written"] = len(rec.steps)
-    checked, findings = check_recommendation(rec, similar, kb, allowed)
+    checked, findings = check_recommendation(rec, similar, kb, allowed, ticket=masked)
     out["kept"] = len(checked.steps) if checked else 0
     out["codes"] = [f.code for f in findings if f.severity == "block" and f.code != "NO_STEPS_LEFT"]
     out["warnings"] = [f.code for f in findings if f.severity == "warn"]

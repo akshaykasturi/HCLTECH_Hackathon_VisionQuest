@@ -10,7 +10,7 @@ Each step is checked on its own. A step that fails any "block" check is DROPPED 
   STEP_SOURCE_LOOKALIKE     the cited ticket only shares keywords; it is a different issue
   STEP_SOURCE_NOT_RESOLVED  the cited ticket was never fixed, so its notes are not a verified fix
   CITE_*                    the excerpt is not copied word for word from the cited source (or too short)
-  NUMBER_NOT_IN_EVIDENCE    a number in the step is not in the cited source
+  NUMBER_NOT_IN_EVIDENCE    a number in the step is not in the cited source (or in the ticket itself)
   CERTAINTY                 "confirmed", "definitely"... in the LLM's own words
   UNSAFE_STEP               a changing action (restart the server, delete, roll back): a human decides
   SECRET                    a token, key, email, phone or password in the step
@@ -40,9 +40,12 @@ import yaml
 
 from app.common.report_checks import (Citation, Evidence, Finding, check_certainty, check_numbers,
                                       check_safe_steps, check_secrets, citation_problem)
-from app.tickets.models import KBHit, Recommendation, SimilarTicket, Step
+from app.tickets.models import KBHit, Recommendation, SimilarTicket, Step, TicketIn
 
 _SETTINGS_FILE = Path(__file__).with_name("checks.yaml")
+# The ticket's own (masked) text as an extra evidence item: a number the user wrote ("constant 429 responses")
+# is a fact about this ticket, so a step or summary may repeat it. It can't be cited as a source.
+TICKET_EVIDENCE_ID = "__ticket__"
 _WORD_RE = re.compile(r"[a-z]+")
 
 
@@ -57,6 +60,13 @@ def _settings() -> dict[str, Any]:
 
 def _block(code: str, message: str, where: str) -> Finding:
     return Finding(code=code, severity="block", message=message, where=where)
+
+
+def ticket_evidence(ticket: Optional[TicketIn]) -> list[Evidence]:
+    if ticket is None:
+        return []
+    parts = [ticket.subject, ticket.description, ticket.affected_service, ticket.environment]
+    return [Evidence(id=TICKET_EVIDENCE_ID, text="\n".join(p for p in parts if p))]
 
 
 def build_evidence(similar: list[SimilarTicket], kb: list[KBHit]) -> list[Evidence]:
@@ -79,8 +89,10 @@ def _words(text: str) -> set[str]:
 
 
 def check_step(step: Step, where: str, evidence: list[Evidence], allowed: set[str],
-               similar_by_id: dict[str, SimilarTicket]) -> list[Finding]:
-    """All findings for one step. Any "block" finding means the step must not be shown."""
+               similar_by_id: dict[str, SimilarTicket], ticket_items: Optional[list[Evidence]] = None) -> list[Finding]:
+    """All findings for one step. Any "block" finding means the step must not be shown.
+    ticket_items: the ticket's own text (ticket_evidence); its numbers may be repeated, it can't be cited."""
+    ticket_items = ticket_items or []
     by_id = {e.id: e for e in evidence}
     if step.source_id not in allowed or step.source_id not in by_id:
         return [_block("STEP_SOURCE_NOT_ALLOWED", f"{step.source_id!r} is not in the allowed evidence", where)]
@@ -101,7 +113,8 @@ def check_step(step: Step, where: str, evidence: list[Evidence], allowed: set[st
 
     # Numbers must come from the cited source only (not from some other ticket).
     for part in ("text", "why"):
-        findings += check_numbers(getattr(step, part), f"{where}.{part}", evidence, cited_ids=[step.source_id])
+        findings += check_numbers(getattr(step, part), f"{where}.{part}", evidence + ticket_items,
+                                  cited_ids=[step.source_id] + [t.id for t in ticket_items])
         findings += check_certainty(getattr(step, part), f"{where}.{part}")
     findings += check_safe_steps(_without_safe_user_actions(step.text), f"{where}.text")
     findings += check_secrets(step, where)
@@ -113,15 +126,19 @@ def check_step(step: Step, where: str, evidence: list[Evidence], allowed: set[st
 
 
 def check_summary(summary: str, evidence: list[Evidence]) -> list[Finding]:
+    """evidence may include the ticket's own text (ticket_evidence)."""
     return (check_certainty(summary, "summary") + check_numbers(summary, "summary", evidence)
             + check_secrets(summary, "summary"))
 
 
 def check_recommendation(rec: Recommendation, similar: list[SimilarTicket], kb: list[KBHit],
-                         allowed_ids: list[str]) -> tuple[Optional[Recommendation], list[Finding]]:
+                         allowed_ids: list[str], ticket: Optional[TicketIn] = None
+                         ) -> tuple[Optional[Recommendation], list[Finding]]:
     """The recommendation with failing steps dropped (and a safe summary if needed), plus every finding.
-    Returns (None, findings) when no step survives."""
+    Returns (None, findings) when no step survives.
+    ticket: the MASKED ticket, optional. When given, numbers from its text (e.g. its error code) may be repeated."""
     evidence = build_evidence(similar, kb)
+    ticket_items = ticket_evidence(ticket)
     allowed = set(allowed_ids)
     similar_by_id = {t.ticket_id: t for t in similar}
 
@@ -134,7 +151,7 @@ def check_recommendation(rec: Recommendation, similar: list[SimilarTicket], kb: 
         if key in seen:
             findings.append(_block("STEP_DUPLICATE", "the same step appears twice", where))
             continue
-        step_findings = check_step(step, where, evidence, allowed, similar_by_id)
+        step_findings = check_step(step, where, evidence, allowed, similar_by_id, ticket_items)
         findings += step_findings
         if not any(f.severity == "block" for f in step_findings):
             kept.append(step)
@@ -145,7 +162,7 @@ def check_recommendation(rec: Recommendation, similar: list[SimilarTicket], kb: 
         return None, findings
 
     summary = rec.summary
-    summary_findings = check_summary(summary, evidence)
+    summary_findings = check_summary(summary, evidence + ticket_items)
     if summary_findings:
         findings += summary_findings
         summary = _settings()["fallback_summary"]

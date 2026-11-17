@@ -78,7 +78,7 @@ def llm_generate(ticket, classification, similar, kb, allowed_ids):
                                       excerpt="Reset the VPN client profile", why="Same error 809.")])
 
 
-def keep_all(rec, similar, kb, allowed_ids):
+def keep_all(rec, similar, kb, allowed_ids, ticket=None):
     return rec, [Finding(code="OK", severity="info", message="all steps cited", where="steps")]
 
 
@@ -195,7 +195,7 @@ def test_a_clean_template_passes_the_real_checks(monkeypatch, calls):
 
 
 def test_checks_crashing_shows_nothing_unchecked(monkeypatch, calls):
-    def broken_checks(rec, similar, kb, allowed_ids):
+    def broken_checks(rec, similar, kb, allowed_ids, ticket=None):
         raise KeyError("x")
 
     install(monkeypatch, calls, classify=classify, check_recommendation=broken_checks)
@@ -211,7 +211,7 @@ def test_generate_failing_or_empty_falls_back_to_the_template(monkeypatch, calls
 
 
 def test_checks_dropping_every_step_escalates(monkeypatch, calls):
-    def drop_all(rec, similar, kb, allowed_ids):
+    def drop_all(rec, similar, kb, allowed_ids, ticket=None):
         return rec.model_copy(update={"steps": []}), [Finding(code="EXCERPT_NOT_FOUND", severity="block",
                                                               message="not verbatim", where="steps[0]")]
 
