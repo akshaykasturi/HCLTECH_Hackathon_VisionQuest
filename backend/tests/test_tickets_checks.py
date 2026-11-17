@@ -178,3 +178,43 @@ def test_real_changes_are_still_unsafe(text):
     from app.common.report_checks import check_safe_steps
     from app.tickets.checks import _without_safe_user_actions
     assert check_safe_steps(_without_safe_user_actions(text), "x") != []
+
+
+# ---- numbers from the ticket itself ------------------------------------------------------------
+
+def test_a_number_from_the_ticket_itself_may_be_repeated():
+    from app.tickets.models import TicketIn
+    ticket = TicketIn(subject="VPN won't connect, error 809", description="Fails since 09:30 with code 0x80070005.")
+    step = GOOD_RESET.model_copy(update={"why": "The ticket's error 809 matches this KB section."})
+    # 809 is in the KB text too; use a number only the ticket has.
+    step = step.model_copy(update={"why": "The user saw this since 09:30, same symptom as the KB section."})
+    without, f1 = run(rec(step))
+    assert without is None and "NUMBER_NOT_IN_EVIDENCE" in codes(f1)              # old behaviour: dropped
+    with_ticket, f2 = check_recommendation(rec(step), SIMILAR, KB, ALLOWED, ticket=ticket)
+    assert with_ticket is not None and with_ticket.steps == [step] and f2 == []
+
+
+def test_a_number_in_neither_ticket_nor_source_is_still_dropped():
+    from app.tickets.models import TicketIn
+    ticket = TicketIn(subject="VPN error 809", description="Fails from home.")
+    step = GOOD_RESET.model_copy(update={"text": "Reset the VPN client profile and wait 30 minutes."})
+    checked, findings = check_recommendation(rec(step), SIMILAR, KB, ALLOWED, ticket=ticket)
+    assert checked is None and "NUMBER_NOT_IN_EVIDENCE" in codes(findings)
+
+
+def test_the_ticket_itself_cannot_be_cited_as_a_source():
+    from app.tickets.checks import TICKET_EVIDENCE_ID
+    from app.tickets.models import TicketIn
+    ticket = TicketIn(subject="VPN error 809", description="Reset the VPN client profile please.")
+    step = Step(text="Reset the VPN client profile.", source_id=TICKET_EVIDENCE_ID,
+                excerpt="Reset the VPN client profile", why="The user asked.")
+    checked, findings = check_recommendation(rec(step), SIMILAR, KB, ALLOWED + [TICKET_EVIDENCE_ID], ticket=ticket)
+    assert checked is None and "STEP_SOURCE_NOT_ALLOWED" in codes(findings)
+
+
+def test_summary_may_repeat_the_tickets_error_code():
+    from app.tickets.models import TicketIn
+    ticket = TicketIn(subject="Partner gets 429 errors", description="Constant 429 responses for one partner.")
+    r = rec(GOOD_RESET, summary="Likely the partner's 429 errors come from a broken VPN profile.")
+    checked, findings = check_recommendation(r, SIMILAR, KB, ALLOWED, ticket=ticket)
+    assert checked.summary.startswith("Likely the partner's 429") and findings == []

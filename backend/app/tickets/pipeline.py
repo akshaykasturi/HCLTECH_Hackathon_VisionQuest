@@ -115,7 +115,7 @@ def _write_steps(masked: TicketIn, classification: Optional[Classification], sim
             note["detail"] = "checks not merged: template shown, not checked"
             return (rec if rec.generator == "template" else template_recommendation(similar)), []
         try:
-            checked, findings = checks(rec, similar, kb, allowed_ids)
+            checked, findings = checks(rec, similar, kb, allowed_ids, ticket=masked)  # ticket: its own numbers may be repeated
         except Exception as exc:  # the checks broke on this input: show nothing unchecked, escalate
             note["detail"] = f"checks failed ({_err(exc)}): nothing shown"
             return None, []

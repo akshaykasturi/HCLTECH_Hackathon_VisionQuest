@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-17 08:25 UTC",
+  "generated_at": "2026-11-17 10:16 UTC",
   "mode": "offline: no LLM, keyword search",
   "split": "all",
   "by_split": {
@@ -377,7 +377,7 @@
       "reason": "insufficient_detail",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -392,7 +392,7 @@
       "reason": "insufficient_detail",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -407,7 +407,7 @@
       "reason": "insufficient_detail",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -422,7 +422,7 @@
       "reason": "insufficient_detail",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -437,7 +437,7 @@
       "reason": "evidence_available",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -452,7 +452,7 @@
       "reason": "evidence_available",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -467,7 +467,7 @@
       "reason": "evidence_available",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": null,
@@ -482,7 +482,7 @@
       "reason": "hazard_or_critical",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": false,
@@ -497,7 +497,7 @@
       "reason": "hazard_or_critical",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": false,
@@ -512,7 +512,7 @@
       "reason": "hazard_or_critical",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": false,
@@ -527,7 +527,7 @@
       "reason": "regulated_or_legal",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": false,
@@ -542,7 +542,7 @@
       "reason": "regulated_or_legal",
       "outcome": "ESCALATE",
       "reasons": [
-        "NO_EVIDENCE"
+        "NOTHING_SIMILAR"
       ],
       "codes": [],
       "by_screen": false,
