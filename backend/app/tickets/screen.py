@@ -13,9 +13,12 @@ Rules:
 - Patterns live in screen.yaml: change words there, not here.
 - Text is normalised first (Unicode NFKC, zero-width characters removed, lower case, single spaces), so
   look-alike letters and hidden characters don't slip past the patterns.
+- Base64 blobs are decoded and screened too, so "decode this: aWdub3Jl..." can't hide an instruction.
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import re
 import unicodedata
 from functools import lru_cache
@@ -29,6 +32,8 @@ from app.tickets.models import ScreenResult, TicketIn
 _RULES_FILE = Path(__file__).with_name("screen.yaml")
 # Zero-width and direction-control characters: invisible, but they split words so patterns miss them.
 _INVISIBLE_RE = re.compile("[­​-‏‪-‮⁠-⁤﻿]")
+# A run of 16+ base64 characters (with optional padding): long enough to hide a short instruction.
+_BASE64_RE = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{16,}={0,2}(?![A-Za-z0-9+/=])")
 
 
 @lru_cache(maxsize=1)
@@ -47,9 +52,26 @@ def normalise(text: str) -> str:
     return " ".join(text.lower().split())
 
 
+def decoded_base64(text: str) -> list[str]:
+    """Readable text hidden in base64 runs. Runs that don't decode to mostly printable text are skipped
+    (ordinary long words and IDs decode to binary noise)."""
+    found = []
+    for m in _BASE64_RE.finditer(text):
+        blob = m.group(0)
+        try:
+            raw = base64.b64decode(blob + "=" * (-len(blob) % 4), validate=True)
+        except (binascii.Error, ValueError):
+            continue
+        decoded = raw.decode("utf-8", errors="ignore")
+        if len(decoded) >= 8 and sum(c.isprintable() or c.isspace() for c in decoded) / len(decoded) > 0.95:
+            found.append(decoded)
+    return found
+
+
 def _ticket_text(ticket: TicketIn) -> str:
     parts = [ticket.subject, ticket.description, ticket.affected_service, ticket.environment, ticket.channel]
-    return normalise(" \n ".join(p for p in parts if p))
+    raw = " \n ".join(p for p in parts if p)
+    return normalise(" \n ".join([raw, *decoded_base64(raw)]))
 
 
 def _matching_codes(text: str, group: str) -> list[str]:
