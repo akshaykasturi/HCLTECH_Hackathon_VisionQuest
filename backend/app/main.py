@@ -30,11 +30,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Callable, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.auth.deps import require_role
 from app.auth.router import router as auth_router
 from app.common import audit
 from app.common.api import ApiError, audit_router, error_response, is_valid_request_id, ok
@@ -212,7 +213,8 @@ def create_app(audit_db_path: Optional[Path] = None, warmups: Optional[list[Call
             return error_response(503, "DATABASE_UNAVAILABLE", "The audit database is not available.")
         return ok(current)
 
-    app.include_router(audit_router)
+    # Saved results and reviewer feedback are analyst work: no anonymous or employee access.
+    app.include_router(audit_router, dependencies=[Depends(require_role("analyst"))])
     app.include_router(tickets_router)
     app.include_router(auth_router)
     return app

@@ -4,8 +4,10 @@ import threading
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth.deps import current_user
 from app.common import audit
 from app.main import create_app
+from app.tickets.models import User
 
 
 def make_client(tmp_path, warmups=()):
@@ -111,6 +113,8 @@ def test_audit_routes_verify_read_and_add_feedback(tmp_path) -> None:
     db = tmp_path / "audit" / "test.db"
     audit.record_result(db, {"result_id": "r-1", "case_id": "CASE-1", "outcome": "RECOMMEND", "summary": "s"})
     with make_client(tmp_path) as client:
+        # The audit routes need an analyst (tests/test_auth.py checks the 401/403); sign in as a test analyst here.
+        client.app.dependency_overrides[current_user] = lambda: User(username="test", role="analyst")
         assert client.get("/api/audit/verify").json()["data"]["valid"] is True
         listed = client.get("/api/audit/results").json()["data"]
         assert [r["result_id"] for r in listed] == ["r-1"] and listed[0]["summary"] == "s"
