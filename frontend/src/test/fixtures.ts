@@ -1,6 +1,7 @@
 // Backend-shaped test data. Field names are the backend's own.
 import type {
   AnalysisResult, ChainStatus, FeedbackRecord, HealthData, LoginData, Preset, ResultSummary, SavedResult, Taxonomy,
+  TicketDetail, TicketSummary,
 } from "../lib/types";
 
 export const HEALTH_OK: HealthData = { api: "up", database: "up", warmup: "ready", warmup_detail: "1 warm-up step(s) done" };
@@ -85,4 +86,29 @@ export const RESULT_ESCALATE: AnalysisResult = {
 export const RESULT_BLOCKED: AnalysisResult = {
   ...BASE, result_id: "res-0004", outcome: "BLOCKED", reasons: ["INJECTION_PATTERN"], confidence: 1,
   screen: { blocked: true, safety: false, codes: ["INJECTION_PATTERN"] },
+};
+
+// ---------- historical tickets (GET /api/tickets, /taxonomy, /{ticket_id}) ----------
+
+export const TICKET_TAXONOMY: Taxonomy = {
+  category: ["Identity & Access", "Network"], priority: ["P1", "P2", "P3", "P4"],
+  status: ["closed", "in_progress", "open", "resolved"], assigned_team: ["Network Operations", "Service Desk"],
+  affected_service: ["Active Directory", "Corporate DNS", "Corporate VPN"], environment: ["production", "staging"],
+  subcategory: { "Identity & Access": ["Account Lockout"], Network: ["DNS", "VPN"] },
+};
+
+export const TICKETS: TicketSummary[] = [
+  { ticket_id: "INC-100045", created_at: "2026-10-02T09:15:00+00:00", status: "resolved", category: "Network",
+    subcategory: "VPN", priority: "P2", assigned_team: "Network Operations", affected_service: "Corporate VPN",
+    environment: "production", subject: "VPN drops after gateway change" },
+  { ticket_id: "INC-100031", created_at: "2026-09-28T14:02:00+00:00", status: "open", category: "Identity & Access",
+    subcategory: "Account Lockout", priority: "P1", assigned_team: "Service Desk", affected_service: "Active Directory",
+    environment: "production", subject: "Many users locked after policy update" },
+];
+
+export const TICKET_DETAIL: TicketDetail = {
+  ...TICKETS[0], resolved_at: "2026-10-02T12:35:00+00:00", channel: "portal",
+  description: "VPN connects but drops every few minutes since the gateway change on Tuesday.",
+  root_cause: "Gateway now requires ciphers that older clients do not offer during rekey", problem_id: "PRB-0040",
+  resolution_text: "Root cause: gateway cipher change. Fix confirmed with the requester. Steps: Confirm the rekey failure in the gateway log | Upgrade the VPN client to the supported version",
 };

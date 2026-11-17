@@ -1,6 +1,7 @@
 // The signed-in session: the JWT from POST /api/auth/login, kept in sessionStorage (docs/ARCHITECTURE.md "Login").
 // sessionStorage, not localStorage: the token disappears when the tab closes. Nothing else is ever stored.
 import type { LoginData, User } from "./types";
+import { ROLES } from "./types";
 
 export const SESSION_KEY = "visionquest.session";
 /** Fired when the backend answers 401 to a request that carried a token (expired or revoked). */
@@ -22,7 +23,7 @@ function storage(): Storage | null {
 
 function isUser(value: unknown): value is User {
   const v = value as User | null;
-  return !!v && typeof v.username === "string" && (v.role === "analyst" || v.role === "lead");
+  return !!v && typeof v.username === "string" && ROLES.includes(v.role);
 }
 
 /** The stored session, or null if there is none, it is malformed or it has expired. */

@@ -10,7 +10,8 @@ import { SESSION_KEY } from "../lib/session";
 import type { User } from "../lib/types";
 
 export type Reply = { status?: number; body?: unknown; raw?: string; delayMs?: number } | "network" | "hang";
-export type Handler = Reply | ((req: { method: string; path: string; body: unknown }) => Reply | Promise<Reply>);
+export type Request = { method: string; path: string; body: unknown; query: URLSearchParams };
+export type Handler = Reply | ((req: Request) => Reply | Promise<Reply>);
 
 export const ok = (data: unknown, status = 200): Reply => ({ status, body: { ok: true, data, error: null } });
 export const fail = (status: number, code: string, message = "error"): Reply =>
@@ -32,12 +33,12 @@ export function analystRoutes(): Record<string, Handler> {
 /** Replace global fetch with a router over "METHOD /path" keys. Unknown routes answer 404 in the envelope. */
 export function mockBackend(routes: Record<string, Handler> = {}) {
   const table = { ...defaultRoutes(), ...routes };
-  const calls: { method: string; path: string; body: unknown }[] = [];
+  const calls: Request[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://127.0.0.1:5173");
     const method = init?.method ?? "GET";
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
-    const req = { method, path: url.pathname, body };
+    const req: Request = { method, path: url.pathname, body, query: url.searchParams };
     calls.push(req);
     const handler = table[`${method} ${url.pathname}`];
     const reply: Reply = handler === undefined ? fail(404, "NOT_FOUND", "Not Found")

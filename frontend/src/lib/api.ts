@@ -2,9 +2,9 @@
 // Errors are normalised into ApiError so screens can show one consistent message and retry.
 import type {
   AnalysisResult, ChainStatus, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
-  ResultSummary, SavedResult, Taxonomy, TicketFeedbackIn, TicketIn, User,
+  ResultSummary, SavedResult, Taxonomy, TicketDetail, TicketFeedbackIn, TicketIn, TicketQuery, TicketSummary, User,
 } from "./types";
-import { OUTCOMES } from "./types";
+import { OUTCOMES, ROLES } from "./types";
 import { readSession, UNAUTHORIZED_EVENT } from "./session";
 
 export type ApiErrorKind = "http" | "network" | "timeout" | "aborted" | "invalid_response";
@@ -177,7 +177,7 @@ export function assertChain(data: unknown): ChainStatus {
 export function assertLogin(data: unknown): LoginData {
   if (!isRecord(data) || typeof data.token !== "string" || !data.token || typeof data.expires_at !== "string"
       || !isRecord(data.user) || typeof data.user.username !== "string"
-      || (data.user.role !== "analyst" && data.user.role !== "lead")) invalid("login response");
+      || !ROLES.includes(data.user.role as never)) invalid("login response");
   return data as unknown as LoginData;
 }
 
@@ -198,6 +198,26 @@ export function assertPresets(data: unknown): Preset[] {
 export function assertTaxonomy(data: unknown): Taxonomy {
   if (!isRecord(data) || !Array.isArray(data.affected_service) || !Array.isArray(data.category)) invalid("taxonomy");
   return data as unknown as Taxonomy;
+}
+
+export function assertTicketList(data: unknown): TicketSummary[] {
+  if (!Array.isArray(data) || !data.every((t) => isRecord(t) && typeof t.ticket_id === "string")) invalid("ticket list");
+  return data as TicketSummary[];
+}
+
+export function assertTicket(data: unknown): TicketDetail {
+  if (!isRecord(data) || typeof data.ticket_id !== "string") invalid("ticket");
+  return data as unknown as TicketDetail;
+}
+
+/** "?q=vpn&priority=P1" from the set values only (empty strings are left out). */
+export function ticketQueryString(query: TicketQuery): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === "string" && value.trim()) params.set(key, value.trim());
+  }
+  const text = params.toString();
+  return text ? `?${text}` : "";
 }
 
 // ---------- endpoints ----------
@@ -233,6 +253,10 @@ export function makeEndpoints(client: ApiClient) {
     presets: (signal?: AbortSignal) => client.request<unknown>("/api/tickets/presets", { signal }).then(assertPresets),
     taxonomy: (signal?: AbortSignal) =>
       client.request<unknown>("/api/tickets/taxonomy", { signal }).then(assertTaxonomy),
+    searchTickets: (query: TicketQuery, signal?: AbortSignal) =>
+      client.request<unknown>(`/api/tickets${ticketQueryString(query)}`, { signal }).then(assertTicketList),
+    ticket: (ticketId: string, signal?: AbortSignal) =>
+      client.request<unknown>(`/api/tickets/${id(ticketId)}`, { signal }).then(assertTicket),
     ticketFeedback: (resultId: string, body: TicketFeedbackIn, signal?: AbortSignal) =>
       client.request<unknown>(`/api/tickets/results/${id(resultId)}/feedback`, { method: "POST", body, signal }),
   };
@@ -285,8 +309,14 @@ export function describeError(error: unknown): ErrorDescription {
       return { title: "Sign-in unavailable", message: "Sign-in is not set up on the server yet.", retryable: false };
     case "UNAUTHORIZED":
       return { title: "Please sign in", message: "Your session has ended. Sign in again to continue.", retryable: false };
+    case "EMPLOYEE_NOT_ALLOWED":
+      return { title: "Staff sign-in only",
+               message: "Employee access is not available yet. Please use the employee support portal.",
+               retryable: false };
     case "FORBIDDEN":
       return { title: "Not allowed", message: "Your role cannot open this page.", retryable: false };
+    case "TICKET_NOT_FOUND":
+      return { title: "Ticket not found", message: "No historical ticket has this ID.", retryable: false };
     case "ANALYSIS_FAILED":
       return { title: "Analysis failed", message: "The ticket could not be analysed. Try again.", retryable: true };
   }

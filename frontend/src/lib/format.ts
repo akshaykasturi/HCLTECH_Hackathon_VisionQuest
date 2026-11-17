@@ -48,3 +48,24 @@ export function valueToText(value: unknown): string {
     return String(value);
   }
 }
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", { year: "numeric", month: "short", day: "2-digit", timeZone: "UTC" });
+
+/** ISO timestamp -> "16 Nov 2026" (UTC). Unparseable input is shown as given. */
+export function formatDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : dayFormat.format(date);
+}
+
+/** Time between two ISO timestamps as "3 h 20 min" / "2 d 4 h"; null if either is missing or invalid. */
+export function formatDuration(fromIso: string | null | undefined, toIso: string | null | undefined): string | null {
+  if (!fromIso || !toIso) return null;
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
+  if (Number.isNaN(ms) || ms < 0) return null;
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ${minutes % 60} min`;
+  return `${Math.floor(hours / 24)} d ${hours % 24} h`;
+}

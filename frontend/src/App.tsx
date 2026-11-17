@@ -10,6 +10,8 @@ import { PublicLayout } from "./components/layout/PublicLayout";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { AnalyzePage } from "./pages/AnalyzePage";
+import { TicketsPage } from "./pages/TicketsPage";
+import { TicketDetailPage } from "./pages/TicketDetailPage";
 import { AuditPage } from "./pages/AuditPage";
 import { SystemHealthPage } from "./pages/SystemHealthPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -40,6 +42,8 @@ export function AppRoutes() {
       <Route path="analyst" element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={<Navigate to={ANALYST_HOME} replace />} />
         <Route path="analyze" element={<AnalyzePage />} />
+        <Route path="tickets" element={<TicketsPage />} />
+        <Route path="tickets/:ticketId" element={<TicketDetailPage />} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="system-health" element={<SystemHealthPage />} />
         <Route path="*" element={<NotFoundPage />} />
