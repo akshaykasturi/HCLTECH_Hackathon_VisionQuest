@@ -13,7 +13,8 @@ BAD_ID (field names and reasons only, the submitted values are never echoed). No
   GET  /history                                              -> db/repo.history(user=, limit=, offset=)
   GET  /stats (role lead)                                    -> db/repo.stats()
 
-Login: app.auth.deps.current_user / require_role when auth is merged. Until then every request runs as
+Login: every route needs role analyst or higher (require_role("analyst")): an employee gets 403. /stats needs
+lead. Without auth.deps (not merged) every request runs as
 User("demo", "analyst") and a warning is logged once: the routes are open.
 The repository (db/repo.py) is optional too: until it exists those routes answer 503 DB_NOT_READY.
 """
@@ -61,8 +62,13 @@ if not AUTH_READY:
     logger.warning("auth not merged: routes are open")
     _current_user = _demo_user
 
-AnyUser = Annotated[User, Depends(_current_user)]
-LeadUser = Annotated[User, Depends(_require_role("lead") if AUTH_READY and _require_role else _current_user)]
+def _at_least(role: str) -> Callable[..., Any]:
+    return _require_role(role) if AUTH_READY and _require_role else _current_user
+
+
+# Every route here is for IT staff: an employee token gets 403 (employees use the complaint routes).
+AnalystUser = Annotated[User, Depends(_at_least("analyst"))]
+LeadUser = Annotated[User, Depends(_at_least("lead"))]
 
 
 # ---- Helpers -----------------------------------------------------------------------------------
@@ -116,7 +122,7 @@ router = APIRouter(prefix="/api/tickets", tags=["tickets"])
 
 
 @router.post("/analyze", summary="Analyse a new ticket (steps 1-7)", openapi_extra=_body_schema(TicketIn))
-def analyze_ticket(user: AnyUser, payload: Any = Body(...)):
+def analyze_ticket(user: AnalystUser, payload: Any = Body(...)):
     ticket = _parse(TicketIn, payload)
     try:
         result = analyze(ticket, user)
@@ -127,13 +133,13 @@ def analyze_ticket(user: AnyUser, payload: Any = Body(...)):
 
 
 @router.get("/presets", summary="Demo tickets for the Analyze page")
-def presets(user: AnyUser):
+def presets(user: AnalystUser):
     items = json.loads(PRESETS_FILE.read_text(encoding="utf-8"))
     return ok([{k: p.get(k) for k in ("id", "label", "expected_outcome", "ticket")} for p in items])
 
 
 @router.get("", summary="Search historical tickets (FR-07)")
-def search_tickets(user: AnyUser, filters: Annotated[TicketFilters, Query()]):
+def search_tickets(user: AnalystUser, filters: Annotated[TicketFilters, Query()]):
     index = get_ticket_index()
     if filters.q:
         rows = {str(r.get("ticket_id")): r for r in index.rows}
@@ -148,7 +154,7 @@ def search_tickets(user: AnyUser, filters: Annotated[TicketFilters, Query()]):
 
 
 @router.get("/taxonomy", summary="Categories, subcategories, priorities and other filter values")
-def taxonomy(user: AnyUser):
+def taxonomy(user: AnalystUser):
     rows = get_ticket_index().rows
     values = {f: sorted({str(r[f]) for r in rows if r.get(f)}) for f in TAXONOMY_FIELDS}
     subcategories: dict[str, set[str]] = {}
@@ -160,7 +166,7 @@ def taxonomy(user: AnyUser):
 
 
 @router.get("/history", summary="Past results with their feedback")
-def history(user: AnyUser, limit: int = Query(default=50, ge=1, le=200), offset: int = Query(default=0, ge=0)):
+def history(user: AnalystUser, limit: int = Query(default=50, ge=1, le=200), offset: int = Query(default=0, ge=0)):
     return ok(_repo_call("history", user=user, limit=limit, offset=offset))
 
 
@@ -171,7 +177,7 @@ def stats(user: LeadUser):
 
 @router.post("/results/{result_id}/feedback", status_code=201, summary="Analyst feedback on a result",
              openapi_extra=_body_schema(FeedbackIn))
-def add_feedback(result_id: str, user: AnyUser, payload: Any = Body(...)):
+def add_feedback(result_id: str, user: AnalystUser, payload: Any = Body(...)):
     _check_id(result_id, "result_id")
     _repo("add_feedback")  # 503 before 400 on the body: nothing can be saved anyway
     feedback = _parse(FeedbackIn, payload)
@@ -179,14 +185,14 @@ def add_feedback(result_id: str, user: AnyUser, payload: Any = Body(...)):
 
 
 @router.post("/results/{result_id}/resolve", summary="Mark a result resolved (MTTR end time)")
-def resolve(result_id: str, user: AnyUser):
+def resolve(result_id: str, user: AnalystUser):
     _check_id(result_id, "result_id")
     resolved_at = _repo_call("resolve", result_id, user)
     return ok({"result_id": result_id, "resolved_at": resolved_at})
 
 
 @router.get("/{ticket_id}", summary="One historical ticket (masked)")
-def get_ticket(ticket_id: str, user: AnyUser):
+def get_ticket(ticket_id: str, user: AnalystUser):
     _check_id(ticket_id, "ticket_id")
     row = next((r for r in get_ticket_index().rows if str(r.get("ticket_id")) == ticket_id), None)
     if row is None:

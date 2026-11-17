@@ -17,7 +17,13 @@ from app.common.trace import TraceStep
 Outcome = Literal["RECOMMEND", "CLARIFY", "ESCALATE", "BLOCKED"]
 MatchLabel = Literal["likely_duplicate", "related", "weak"]
 Verdict = Literal["useful", "incorrect", "unresolved"]
-Role = Literal["analyst", "lead"]
+Role = Literal["employee", "analyst", "lead"]      # employee: submits complaints, sees only their own
+Impact = Literal["minor", "slows_me_down", "cannot_work", "many_people"]
+ComplaintStatus = Literal["received", "needs_info", "reviewed", "resolved"]
+# A category_hint is a short label picked or typed by the employee ("Network", "Email / Outlook"): no "@",
+# no ":", so an email address or a key cannot be smuggled in through it.
+CATEGORY_HINT_PATTERN = r"^[A-Za-z0-9 &/,.()'+-]{1,50}$"
+REFERENCE_PATTERN = r"^[A-Z]{2,5}-[A-Za-z0-9-]{3,40}$"   # e.g. CMP-2026-000123
 
 
 # ---- Input -------------------------------------------------------------------------------
@@ -30,6 +36,10 @@ class TicketIn(BaseModel):
     environment: Optional[str] = Field(default=None, max_length=50)   # e.g. prod, staging, laptop
     channel: Optional[str] = Field(default=None, max_length=50)       # e.g. portal, email, phone
     created_at: Optional[datetime] = None                             # set by the API if missing
+    impact: Optional[Impact] = None                                   # the reporter's own words on impact
+    # Stored and shown to the analyst, NEVER used in the decision: the reporter's guess must not steer the
+    # classifier or the gate (they decide from the text and the evidence).
+    category_hint: Optional[str] = Field(default=None, max_length=50, pattern=CATEGORY_HINT_PATTERN)
 
 
 class TicketFilters(BaseModel):
@@ -160,3 +170,45 @@ class LoginIn(BaseModel):
 class User(BaseModel):
     username: str
     role: Role
+
+
+# ---- Employee complaints -----------------------------------------------------------------------
+# An employee reports a problem; the same pipeline analyses it, but the employee only ever sees a
+# reference, a status and plain messages, never the analysis, evidence or other people's tickets.
+# Outcome -> status: CLARIFY -> needs_info (with the question); RECOMMEND, ESCALATE, BLOCKED -> received.
+# reviewed / resolved are set later by an analyst (feedback, resolve). See docs/ARCHITECTURE.md.
+
+class ComplaintIn(BaseModel):
+    """What an employee submits. Becomes a TicketIn (channel "portal") for the pipeline."""
+    subject: str = Field(min_length=3, max_length=300)
+    description: str = Field(min_length=1, max_length=5000)
+    affected_service: Optional[str] = Field(default=None, max_length=100)
+    impact: Optional[Impact] = None
+    category_hint: Optional[str] = Field(default=None, max_length=50, pattern=CATEGORY_HINT_PATTERN)
+
+    def to_ticket(self, created_at: Optional[datetime] = None) -> TicketIn:
+        return TicketIn(**self.model_dump(), channel="portal", created_at=created_at)
+
+
+class ComplaintReceipt(BaseModel):
+    """The answer right after submitting."""
+    reference: str = Field(pattern=REFERENCE_PATTERN)
+    status: ComplaintStatus
+    submitted_at: datetime
+    message: str = Field(min_length=1, max_length=500)
+    question: Optional[str] = Field(default=None, max_length=500)     # set when status is needs_info
+
+
+class TimelineEvent(BaseModel):
+    event: str = Field(min_length=1, max_length=200)                  # e.g. "Received", "Reviewed by IT"
+    at: datetime
+
+
+class ComplaintSummary(BaseModel):
+    """One of the employee's own complaints, for "My requests"."""
+    reference: str = Field(pattern=REFERENCE_PATTERN)
+    subject: str                                                      # masked
+    status: ComplaintStatus
+    submitted_at: datetime
+    resolved_at: Optional[datetime] = None
+    timeline: list[TimelineEvent] = Field(default_factory=list)       # oldest first

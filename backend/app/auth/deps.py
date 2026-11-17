@@ -27,7 +27,8 @@ from app.common.api import ApiError
 from app.tickets.models import Role, User
 
 # Higher number = more rights. A role may do anything a lower role may.
-ROLE_LEVEL = {"analyst": 1, "lead": 2}
+# employee is the lowest: require_role("analyst") keeps employees out of every analyst route.
+ROLE_LEVEL = {"employee": 0, "analyst": 1, "lead": 2}
 assert set(ROLE_LEVEL) == set(get_args(Role)), "ROLE_LEVEL must list every Role"
 
 _bearer = HTTPBearer(auto_error=False)
