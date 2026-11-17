@@ -82,7 +82,8 @@ and red-team cases: `backend/data/tickets/labelled_cases.jsonl`. KB articles: `b
 "Leads" means the main person who builds it first and who to ask, not the only person. One owner per new file.
 
 - **Akshay**: integration + merges; `tickets/models.py`, `tickets/similar.py`, `tickets/kb.py`, `tickets/gate.py`,
-  `tickets/pipeline.py`, `tickets/chunking.py`, `tickets/policy.yaml`, `app/main.py`, `scripts/build_index.py`; Render + Neon deploy.
+  `tickets/pipeline.py`, `tickets/chunking.py`, `tickets/policy.yaml`, `app/main.py`, `api/tickets.py` (taken over
+  from Roshan), `scripts/build_index.py`; Render + Neon deploy.
 - **Atheesha**: `tickets/screen.py`, `tickets/guard.py` (+ `common/redact.py` additions), `tickets/prompts.py`,
   `tickets/generate.py`, `tickets/checks.py`, `auth/` (`security.py`, `deps.py`, `router.py`),
   `scripts/redteam.py`, `scripts/seed_users.py`, `data/tickets/redteam.jsonl`.
@@ -92,7 +93,7 @@ and red-team cases: `backend/data/tickets/labelled_cases.jsonl`. KB articles: `b
   `data/docs/kb/`, `docs/DATA-CARD.md`, `tickets/mttr.py`, `scripts/evaluate.py`, `docs/EVALUATION.md`,
   `docs/WORKED-EXAMPLES.md`, Miro board, pitch. KB: 15-25 articles, 400-800 words, 4-6 `##` sections;
   each eval ticket has gold kb `doc_id` + `key_sentence`.
-- **Roshan**: `api/tickets.py` (thin routes), frontend pages `LoginPage`, `AnalyzePage`, `TicketsPage`,
+- **Roshan**: frontend pages `LoginPage`, `AnalyzePage`, `TicketsPage`,
   `ReviewHistoryPage`, `DashboardPage` + token handling in `frontend/src/lib/api.ts`; Vercel deploy.
 
 ## Decided so far

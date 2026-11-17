@@ -188,6 +188,11 @@ def _passes(row: dict[str, Any], filters: Optional[TicketFilters]) -> bool:
     return True
 
 
+def passes_filters(row: dict[str, Any], filters: Optional[TicketFilters]) -> bool:
+    """Public: does an index row match the filters (GET /api/tickets lists rows without a query)."""
+    return _passes(row, filters)
+
+
 # ---- Search ------------------------------------------------------------------------------------
 
 def _ranks(scores: np.ndarray, keep: list[int]) -> dict[int, int]:
@@ -222,6 +227,11 @@ def _resolution_text(row: dict[str, Any]) -> Optional[str]:
     steps = (row.get("resolution_steps") or "").strip()
     text = " ".join(x for x in (notes, f"Steps: {steps}" if steps else "") if x)
     return text or None
+
+
+def resolution_text(row: dict[str, Any]) -> Optional[str]:
+    """Public: the (masked) resolution notes + " Steps: " + steps of an index row."""
+    return _resolution_text(row)
 
 
 def search_similar(query: str, k: int = 5, filters: Optional[TicketFilters] = None,
