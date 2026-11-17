@@ -1,0 +1,22 @@
+# Settings for app/tickets/checks.py. Change words here, not in code.
+
+# A step may only cite a past ticket that was actually fixed (FR-03: "resolved historical cases").
+resolved_statuses: [Resolved, Closed]
+
+# Everyday end-user fixes that use a word from the "changes the system" list in
+# common/report_checks.yaml (restart, disable, delete...). They are safe on the user's own device,
+# so they are taken out of the step text before the unsafe-step check runs.
+# Server, account and data changes (restart the server, delete the user, roll back) stay blocked.
+safe_user_actions:
+  - '\brestart(s|ed|ing)?\s+(the\s+|your\s+|their\s+|my\s+)?(laptop|computer|pc|desktop|machine|device|phone|mobile|tablet|browser|outlook|teams|vpn\s+client|client|app|application)\b'
+  - '\b(shut\s*down|shutdown)\s+(the\s+|your\s+)?(laptop|computer|pc|desktop|machine|device)\b'
+  - '\bdisabl(e|es|ed|ing)\s+(the\s+)?(power\s+saving|battery\s+saver|(browser\s+)?(extensions?|add-?ins?|add-?ons?)|wi-?fi\s+power\s+management)\b'
+  - '\bdelet(e|es|ed|ing)\s+(the\s+)?(browser\s+)?(cache|cookies|temp(orary)?\s+files|cached\s+credentials)\b'
+  - '\b(flush|flushed|flushing)\s+(the\s+)?(local\s+)?dns(\s+cache)?\b'
+  - '\b(clear|purge|purged|purging)\s+(the\s+)?(browser\s+)?(cache|cookies)\b'
+
+# Shown instead of the LLM's summary when the summary fails a check (the steps are still shown).
+fallback_summary: "Suggested steps, each copied from the cited source. Review before acting."
+
+# A step whose text shares no word (4+ letters) with its excerpt is flagged for the reviewer.
+min_shared_word_len: 4
