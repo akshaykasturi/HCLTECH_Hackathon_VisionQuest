@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import { LOGIN_OK, STATS } from "./fixtures";
+import { CHAIN_BAD, CHAIN_OK, LOGIN_OK, RESULTS, STATS } from "./fixtures";
 import { analystRoutes, deferred, fail, mockBackend, ok, renderApp, signIn, type Handler, type Reply } from "./utils";
 
 const LEAD = { username: "lena", role: "lead" as const };
 const STATS_PATH = "/api/tickets/stats";
 
-function backend(stats: Handler = ok(STATS)) {
-  return mockBackend({ ...analystRoutes(), [`GET ${STATS_PATH}`]: stats });
+function backend(stats: Handler = ok(STATS), audit: Record<string, Handler> = {}) {
+  return mockBackend({
+    ...analystRoutes(),
+    [`GET ${STATS_PATH}`]: stats,
+    "GET /api/audit/verify": ok(CHAIN_OK),
+    "GET /api/audit/results": ok(RESULTS),
+    ...audit,
+  });
 }
 const tile = (label: string) => screen.getByRole("article", { name: label });
 
@@ -160,5 +166,69 @@ describe("dashboard content", () => {
     signIn(LEAD);
     renderApp("/analyst/dashboard");
     expect(await screen.findByText("Unexpected response")).toBeInTheDocument();
+  });
+});
+
+describe("dashboard audit trail", () => {
+  const trail = () => screen.getByRole("region", { name: "Audit trail" });
+
+  it("shows an intact chain and the newest audit records, with the lead's token", async () => {
+    const api = backend();
+    signIn(LEAD, "tok-lead");
+    renderApp("/analyst/dashboard");
+    const integrity = await screen.findByRole("region", { name: "Audit log integrity" });
+    expect(await within(integrity).findByText("Chain intact")).toBeInTheDocument();
+    expect(within(integrity).getByText("3 events checked")).toBeInTheDocument();
+    const list = await screen.findByRole("list", { name: "Recent audit records list" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(RESULTS.length);
+    expect(within(rows[0]).getByText("CASE-0002")).toBeInTheDocument(); // newest first, as the backend sends them
+    expect(within(rows[1]).getByText(/1 feedback/)).toBeInTheDocument();
+    expect(within(trail()).getByRole("link", { name: "Open Audit History" })).toHaveAttribute("href", "/analyst/audit");
+    for (const path of ["/api/audit/verify", "/api/audit/results"]) {
+      const init = api.fetchMock.mock.calls.find(([u]) => String(u).endsWith(path))?.[1];
+      expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer tok-lead");
+    }
+  });
+
+  it("shows a broken chain with where and why it broke", async () => {
+    backend(ok(STATS), { "GET /api/audit/verify": ok(CHAIN_BAD) });
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    const integrity = await screen.findByRole("region", { name: "Audit log integrity" });
+    expect(await within(integrity).findByText("Chain broken at event #2")).toBeInTheDocument();
+    expect(within(integrity).getByText(CHAIN_BAD.reason!)).toBeInTheDocument();
+    expect(within(integrity).queryByText("Chain intact")).not.toBeInTheDocument();
+  });
+
+  it("says so when the audit log is still empty", async () => {
+    backend(ok(STATS), { "GET /api/audit/verify": ok({ ...CHAIN_OK, events_checked: 0 }), "GET /api/audit/results": ok([]) });
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    expect(await screen.findByText("No events recorded yet")).toBeInTheDocument();
+    expect(await screen.findByText("No audit records yet.")).toBeInTheDocument();
+  });
+
+  it("still shows the audit trail while the stats are unavailable", async () => {
+    backend(fail(503, "DB_NOT_READY", "x"));
+    signIn(LEAD);
+    renderApp("/analyst/dashboard");
+    expect(await screen.findByText("Dashboard data is temporarily unavailable. Please try again later.")).toBeInTheDocument();
+    expect(await screen.findByText("Chain intact")).toBeInTheDocument();
+    expect(await screen.findByRole("list", { name: "Recent audit records list" })).toBeInTheDocument();
+  });
+
+  it("keeps an audit failure inside its card and can retry it", async () => {
+    let failing = true;
+    const api = backend(ok(STATS), { "GET /api/audit/verify": () => (failing ? fail(500, "INTERNAL_ERROR", "x") : ok(CHAIN_OK)) });
+    signIn(LEAD);
+    const { user } = renderApp("/analyst/dashboard");
+    const integrity = await screen.findByRole("region", { name: "Audit log integrity" });
+    expect(await within(integrity).findByText("Server error")).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Analyses" })).toHaveTextContent("120"); // the rest still renders
+    failing = false;
+    await user.click(within(integrity).getByRole("button", { name: "Retry" }));
+    expect(await within(integrity).findByText("Chain intact")).toBeInTheDocument();
+    expect(api.callsTo("GET", "/api/audit/verify")).toHaveLength(2);
   });
 });
