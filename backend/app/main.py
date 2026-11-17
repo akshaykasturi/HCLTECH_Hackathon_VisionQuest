@@ -166,7 +166,7 @@ def create_app(audit_db_path: Optional[Path] = None, warmups: Optional[list[Call
         CORSMiddleware,
         allow_origins=cors_origins(),
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", REQUEST_ID_HEADER],
+        allow_headers=["Content-Type", "Authorization", REQUEST_ID_HEADER],  # Authorization: login token
         expose_headers=[REQUEST_ID_HEADER],
     )
 

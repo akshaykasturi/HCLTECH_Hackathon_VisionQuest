@@ -1,0 +1,26 @@
+# Render Blueprint: the backend (FastAPI) as one free web service. Steps: docs/DEPLOY.md.
+# Secrets are NOT in this file: every `sync: false` value is typed into the Render dashboard.
+services:
+  - type: web
+    name: visionquest-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health/ready
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: DATABASE_URL        # Neon connection string, with sslmode=require
+        sync: false
+      - key: JWT_SECRET          # long random string
+        sync: false
+      - key: DEMO_USERS          # username:password:role,username:password:role
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: CORS_ORIGINS        # the Vercel URL, e.g. https://<project>.vercel.app (no trailing slash)
+        sync: false

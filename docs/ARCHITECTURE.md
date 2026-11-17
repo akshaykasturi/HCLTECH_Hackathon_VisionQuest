@@ -81,10 +81,12 @@ fiddly; that's the next step.
 
 ## Deployment
 
+Click-by-click steps: [docs/DEPLOY.md](DEPLOY.md).
+
 | Service | Runs | Settings (secrets only in the host's dashboard, never in git) |
 |---|---|---|
 | Vercel | `frontend/` | `VITE_API_BASE_URL` = Render URL; SPA rewrite to `index.html` |
-| Render | `backend/` web service | Build: `pip install -r requirements.txt && python scripts/build_index.py`. Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Health check: `/health/ready`. Env: `DATABASE_URL`, `JWT_SECRET`, `DEMO_USERS`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS` = Vercel URL |
+| Render | `backend/` web service | Blueprint `render.yaml`. Build: `pip install -r requirements.txt` (the index is built at startup warm-up). Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Health check: `/health/ready`. Env: `DATABASE_URL`, `JWT_SECRET`, `DEMO_USERS`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS` = Vercel URL |
 | Neon | Postgres | `DATABASE_URL` with `sslmode=require` |
 
 Free Render sleeps after ~15 min idle: open the site 5 min before the demo. If memory runs out, set

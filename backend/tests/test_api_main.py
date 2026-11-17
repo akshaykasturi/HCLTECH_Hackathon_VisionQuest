@@ -77,6 +77,17 @@ def test_cors_from_environment(tmp_path, monkeypatch) -> None:
     assert "access-control-allow-origin" not in other.headers
 
 
+def test_cors_preflight_allows_the_login_token(tmp_path, monkeypatch) -> None:
+    # The deployed frontend (Vercel) calls the API (Render) cross-site with Authorization: Bearer <JWT>.
+    monkeypatch.setenv("CORS_ORIGINS", "https://visionquest.vercel.app")
+    with make_client(tmp_path) as client:
+        preflight = client.options("/api/tickets/analyze", headers={
+            "Origin": "https://visionquest.vercel.app", "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "authorization, content-type"})
+    assert preflight.status_code == 200
+    assert "authorization" in preflight.headers["access-control-allow-headers"].lower()
+
+
 def test_wildcard_cors_is_refused(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("CORS_ORIGINS", "*")
     with pytest.raises(ValueError):
