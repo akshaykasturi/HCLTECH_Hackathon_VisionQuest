@@ -82,6 +82,7 @@ class SimilarTicket(BaseModel):
     why: list[str] = Field(default_factory=list)              # e.g. ["same affected_service", "same error code 809"]
     lookalike: bool = False                                   # shares keywords, different issue
     problem_id: Optional[str] = None                          # set when linked to an outage / open problem
+    root_cause: Optional[str] = None                          # masked; the gate compares the top matches' causes
     resolution_text: Optional[str] = None                     # full resolution (masked); the LLM may cite it
     past_feedback: dict[str, int] = Field(default_factory=dict)   # {"useful": 3, "incorrect": 1}
 

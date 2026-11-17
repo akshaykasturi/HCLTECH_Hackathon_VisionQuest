@@ -309,7 +309,8 @@ def search_similar(query: str, k: int = 5, filters: Optional[TicketFilters] = No
             ticket_id=tid, subject=row.get("subject") or "", category=row.get("category") or "",
             subcategory=row.get("subcategory") or None, status=row.get("status") or "",
             score=round(score, 4), match=match, why=why, lookalike=lookalike,
-            problem_id=row.get("problem_id") or None, resolution_text=_resolution_text(row),
+            problem_id=row.get("problem_id") or None, root_cause=(row.get("root_cause") or "").strip() or None,
+            resolution_text=_resolution_text(row),
             past_feedback=feedback.get(tid, {})))
     return out
 
