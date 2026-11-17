@@ -9,11 +9,11 @@ from app.tickets.similar import build_ticket_index, retrieval_eval, search_simil
 
 
 def ticket(tid, split, category, subcategory, service, group, subject, description, created="2026-01-10T09:00:00",
-           notes="", steps="", problem_id=""):
+           notes="", steps="", problem_id="", root_cause=""):
     return {"ticket_id": tid, "created_at": created, "resolved_at": "", "status": "Resolved", "channel": "portal",
             "category": category, "subcategory": subcategory, "priority": "P3", "assigned_team": "Service Desk",
             "affected_service": service, "environment": "laptop", "subject": subject, "description": description,
-            "root_cause": "", "resolution_notes": notes, "resolution_steps": steps, "problem_id": problem_id,
+            "root_cause": root_cause, "resolution_notes": notes, "resolution_steps": steps, "problem_id": problem_id,
             "dup_group_id": group, "split": split}
 
 
@@ -21,7 +21,7 @@ ROWS = [
     ticket("INC1", "train", "Network", "VPN", "VPN", "G1", "VPN error 809 from home",
            "The VPN client fails with error 809 when connecting from home.",
            notes="Called jane.doe@example.com and reset the VPN profile.", steps="Reset VPN profile | Reconnect",
-           problem_id="PRB-12"),
+           problem_id="PRB-12", root_cause="Corrupt VPN profile, found by jane.doe@example.com"),
     ticket("INC2", "val", "Email", "Outlook", "Email", "G2", "Outlook keeps asking for password",
            "Outlook prompts for the password every few minutes.", created="2026-03-01T10:00:00"),
     ticket("INC3", "train", "Access", "Password Reset", "Active Directory", "G3", "VPN password expired",
@@ -149,6 +149,7 @@ def test_resolution_text_is_masked(index):
     hit = search_similar(PARAPHRASE, k=1, index=index)[0]
     assert "jane.doe@example.com" not in hit.resolution_text
     assert hit.resolution_text == "Called <EMAIL> and reset the VPN profile. Steps: Reset VPN profile | Reconnect"
+    assert hit.root_cause == "Corrupt VPN profile, found by <EMAIL>"
     assert all("jane.doe" not in str(v) for row in index.rows for v in row.values())
 
 
