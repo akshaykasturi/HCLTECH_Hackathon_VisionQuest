@@ -1,0 +1,143 @@
+{
+  "model": "svm_C1",
+  "split": "val",
+  "labels": [
+    "Business Applications",
+    "Cloud",
+    "Collaboration",
+    "Database",
+    "Endpoint",
+    "Identity & Access",
+    "Infrastructure",
+    "Network",
+    "Security"
+  ],
+  "matrix": [
+    [
+      14,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      1,
+      9,
+      0,
+      3,
+      0,
+      3,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      14,
+      0,
+      0,
+      0,
+      0,
+      2,
+      0
+    ],
+    [
+      0,
+      7,
+      0,
+      8,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      21,
+      3,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      24,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      1,
+      4,
+      2,
+      0,
+      0,
+      17,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      24,
+      0
+    ],
+    [
+      0,
+      0,
+      4,
+      0,
+      3,
+      0,
+      0,
+      0,
+      9
+    ]
+  ],
+  "top_confusions": [
+    {
+      "true": "Database",
+      "predicted": "Cloud",
+      "count": 7
+    },
+    {
+      "true": "Infrastructure",
+      "predicted": "Collaboration",
+      "count": 4
+    },
+    {
+      "true": "Security",
+      "predicted": "Collaboration",
+      "count": 4
+    },
+    {
+      "true": "Cloud",
+      "predicted": "Database",
+      "count": 3
+    },
+    {
+      "true": "Cloud",
+      "predicted": "Identity & Access",
+      "count": 3
+    }
+  ]
+}
