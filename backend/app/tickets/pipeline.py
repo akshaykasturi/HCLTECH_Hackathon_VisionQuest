@@ -11,7 +11,7 @@
 
 Teammates' parts are loaded with trace.optional(): a missing or failing part gets a simple fallback and a
 trace note, so the pipeline always answers. Two things never fall back: masking (no raw text may continue)
-and checks (unchecked LLM output is never shown; the template is used instead).
+and checks (every recommendation, LLM or template, goes through them; unchecked LLM output is never shown).
 
 Trace notes contain step names, counts and error class names only, never ticket text.
 """
@@ -53,14 +53,15 @@ def _escalation_group(classification: Optional[Classification]) -> str:
 
 def template_recommendation(similar: list[SimilarTicket]) -> Optional[Recommendation]:
     """Steps copied word for word from the best strong past ticket (not a lookalike, score >= related_threshold).
-    No LLM: each step's excerpt IS its text, so it is verbatim by construction. None if there is nothing to copy."""
+    No LLM: each step's excerpt IS its text, so it is verbatim by construction. None if there is nothing to copy.
+    `why` names the ticket but not the similarity score: the number check only allows numbers from the source."""
     threshold = gate_policy()["related_threshold"]
     strong = sorted((s for s in similar if not s.lookalike and s.score >= threshold), key=lambda s: -s.score)
     if not strong or not strong[0].resolution_text or "Steps:" not in strong[0].resolution_text:
         return None
     best = strong[0]
     texts = [s.strip() for s in best.resolution_text.rsplit("Steps:", 1)[1].split(" | ") if s.strip()]
-    why = f"Resolved ticket {best.ticket_id} ({best.match}, similarity {best.score:.2f})"
+    why = f"Resolved ticket {best.ticket_id} (match: {best.match.replace('_', ' ')})"
     steps = [Step(text=s, source_id=best.ticket_id, excerpt=s, why=why) for s in texts]
     if not steps:
         return None
@@ -85,20 +86,25 @@ def _write_steps(masked: TicketIn, classification: Optional[Classification], sim
                 note["detail"] = f"generate failed ({_err(exc)}): template used"
                 rec = None
     if rec is None:
-        return template_recommendation(similar), []
+        rec = template_recommendation(similar)
+        if rec is None:
+            return None, []
 
+    # Every recommendation goes through the checks, the template too: a past ticket's own fix can be
+    # unsafe ("restart the server") or carry a secret. Found by Atheesha.
     with trace.step("checks") as note:
         checks = optional("app.tickets.checks", "check_recommendation")
         if checks is None:
-            note["detail"] = "checks.py not ready: LLM output not shown, template used"
-            return template_recommendation(similar), []
+            # Unchecked LLM output is never shown. The template is shown unchecked: its steps are quotes.
+            note["detail"] = "checks not merged: template shown, not checked"
+            return (rec if rec.generator == "template" else template_recommendation(similar)), []
         try:
             checked, findings = checks(rec, similar, kb, allowed_ids)
-        except Exception as exc:
-            note["detail"] = f"checks failed ({_err(exc)}): LLM output not shown, template used"
-            return template_recommendation(similar), []
+        except Exception as exc:  # the checks broke on this input: show nothing unchecked, escalate
+            note["detail"] = f"checks failed ({_err(exc)}): nothing shown"
+            return None, []
         kept = len(checked.steps) if checked else 0
-        note["detail"] = f"{kept} of {len(rec.steps)} steps passed, {len(findings)} findings"
+        note["detail"] = f"{rec.generator}: {kept} of {len(rec.steps)} steps passed, {len(findings)} findings"
         return checked, list(findings)
 
 
