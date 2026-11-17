@@ -21,14 +21,17 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from fractions import Fraction
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 import numpy as np
 import yaml
 
 from app.common.doc_search import tokenize
-from app.common.mcdm import blend_weights, entropy_weights, order, topsis
+from app.common.mcdm import (CR_LIMIT, ahp_matrix_from_upper, ahp_weights, blend_weights, entropy_weights, order,
+                             topsis)
 from app.common.redact import mask
 from app.common.report_checks import Finding
 from app.tickets.models import Classification, SimilarTicket, TicketIn
@@ -36,11 +39,16 @@ from app.tickets.similar import POLICY_FILE, TicketIndex, get_ticket_index
 
 logger = logging.getLogger(__name__)
 
-METHODS = ("blended", "prior", "entropy")  # "retrieval" = this step off; used by the evaluation
+# "retrieval" = this step off. prior / blended use prior_source; ahp / ahp_entropy always use the AHP weights.
+METHODS = ("blended", "prior", "entropy", "ahp", "ahp_entropy")
+AHP_METHODS = ("ahp", "ahp_entropy")
+PRIOR_SOURCES = ("typed", "ahp")
+AHP_FILE = Path(__file__).with_name("ahp_judgements.yaml")
 RESOLVED_STATUSES = frozenset({"resolved", "closed"})
 
 DEFAULTS: dict[str, Any] = {
     "enabled": False,
+    "prior_source": "typed",   # "typed": prior_weight below; "ahp": weights from ahp_judgements.yaml (CR < 0.10)
     "pool_k": 20,
     "top_n": 5,
     "lam": 0.5,
@@ -67,6 +75,38 @@ def mcdm_policy() -> dict[str, Any]:
     except FileNotFoundError:
         section = {}
     return {**DEFAULTS, **section}
+
+
+@dataclass(frozen=True)
+class AhpPrior:
+    weights: dict[str, float]   # criterion -> AHP weight (sums to 1 over the file's criteria)
+    cr: float                   # consistency ratio
+    accepted: bool              # cr < CR_LIMIT
+    author: str
+
+
+def _number(value: Any) -> float:
+    return float(Fraction(str(value).strip()))   # 2, "2", "1/2"
+
+
+@lru_cache(maxsize=4)
+def ahp_prior(path: str = str(AHP_FILE)) -> AhpPrior:
+    """AHP weights from the judgements file, computed once. Rejected (accepted=False) if CR >= 0.10."""
+    with Path(path).open(encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    names = list(data["criteria"])
+    judgements: dict[tuple[str, str], float] = {}
+    for j in data["judgements"]:
+        key = (j["row"], j["col"])
+        if key in judgements:
+            raise ValueError(f"judgement {key} is given twice in {Path(path).name}")
+        judgements[key] = _number(j["value"])
+    w, cr = ahp_weights(ahp_matrix_from_upper(names, judgements))
+    accepted = cr < CR_LIMIT
+    if not accepted:
+        logger.warning("AHP judgements in %s are inconsistent (CR %.3f >= %.2f); typed priors will be used",
+                       Path(path).name, cr, CR_LIMIT)
+    return AhpPrior(dict(zip(names, (float(v) for v in w))), float(cr), accepted, str(data.get("author", "")))
 
 
 # ---- Criteria: each returns one value per candidate, or None when the source does not exist ----------
@@ -169,6 +209,8 @@ class RerankResult:
     explanations: dict[str, dict[str, Any]] = field(default_factory=dict)  # ticket_id -> closeness, ranks, ...
     findings: list[Finding] = field(default_factory=list)
     detail: str = ""                                    # one trace line: numbers and criterion names only
+    prior_source: str = "typed"                         # where the prior weights came from: "typed" or "ahp"
+    ahp: Optional[dict[str, Any]] = None                # AHP weights, CR, accepted, author (when AHP was asked for)
 
 
 def _attach(ticket: SimilarTicket, explain: dict[str, Any]) -> SimilarTicket:
@@ -191,7 +233,8 @@ def mcdm_rank(pool: list[SimilarTicket], query: str, ticket: TicketIn,
     """Re-rank `pool` (retrieval order, best first). Never raises: on any error the retrieval order is kept.
 
     `policy` overrides keys of policy.yaml `mcdm` (tests, evaluation). `method`: "blended" (normal),
-    "prior" or "entropy" (evaluation arms). `query` and `ticket` must already be masked.
+    "prior", "entropy", "ahp" (AHP weights only) or "ahp_entropy" (lam * entropy + (1 - lam) * AHP), the last
+    four for evaluation arms. `query` and `ticket` must already be masked.
     """
     p = {**mcdm_policy(), **(policy or {})}
     top_n = int(p["top_n"])
@@ -211,6 +254,8 @@ def _rank(pool: list[SimilarTicket], query: str, ticket: TicketIn, classificatio
           p: dict[str, Any], method: str, index: TicketIndex) -> RerankResult:
     if method not in METHODS:
         raise ValueError(f"unknown method {method!r}; use one of {METHODS}")
+    if p["prior_source"] not in PRIOR_SOURCES:
+        raise ValueError(f"prior_source must be one of {PRIOR_SOURCES}, got {p['prior_source']!r}")
     top_n = int(p["top_n"])
     if not pool:
         return RerankResult(similar=[], applied=False, method=method, detail="mcdm: no candidates")
@@ -241,13 +286,32 @@ def _rank(pool: list[SimilarTicket], query: str, ticket: TicketIn, classificatio
     m = X.shape[0]
     w_entropy = entropy_weights(X, benefit) if m >= int(p["min_candidates_for_entropy"]) else None
     floor = float(p["weight_floor"])
-    if method == "prior":
-        w = blend_weights(None, prior, 0.0, floor)
+
+    # Prior weights: the typed prior_weight numbers, or AHP. AHP replaces only these numbers.
+    ahp_info: Optional[dict[str, Any]] = None
+    ahp_list: Optional[list[float]] = None
+    if method in AHP_METHODS or p["prior_source"] == "ahp":
+        a = ahp_prior(str(p.get("ahp_file") or AHP_FILE))
+        missing = [n for n in names if n not in a.weights]
+        if missing:
+            raise ValueError(f"no AHP judgements for criteria {missing}")
+        ahp_info = {"weights": {n: round(v, 4) for n, v in a.weights.items()}, "cr": round(a.cr, 4),
+                    "accepted": a.accepted, "author": a.author}
+        if a.accepted:
+            ahp_list = [a.weights[n] for n in names]
+        else:
+            ahp_info["note"] = f"CR {a.cr:.3f} >= {CR_LIMIT:.2f}: typed prior_weight used instead"
+    uses_ahp = ahp_list is not None and (method in AHP_METHODS or p["prior_source"] == "ahp")
+    prior_used = ahp_list if uses_ahp else prior
+
+    if method in ("prior", "ahp"):
+        w = blend_weights(None, prior_used, 0.0, floor)
     elif method == "entropy":
         w = blend_weights(w_entropy, prior, 1.0, floor) if w_entropy is not None else blend_weights(None, prior, 0, floor)
-    else:
-        w = blend_weights(w_entropy, prior, float(p["lam"]), floor)
-    prior_n = np.asarray(prior) / sum(prior) if sum(prior) > 0 else np.full(len(prior), 1.0 / len(prior))
+    else:   # blended, ahp_entropy
+        w = blend_weights(w_entropy, prior_used, float(p["lam"]), floor)
+    prior_n = (np.asarray(prior_used) / sum(prior_used) if sum(prior_used) > 0
+               else np.full(len(prior_used), 1.0 / len(prior_used)))
 
     result = topsis(X, w, benefit)
     ranked = order(result.closeness)[:top_n]      # pool is in retrieval order, so ties keep it
@@ -266,10 +330,17 @@ def _rank(pool: list[SimilarTicket], query: str, ticket: TicketIn, classificatio
     weights = {n: {"entropy": None if w_entropy is None else round(float(w_entropy[j]), 4),
                    "prior": round(float(prior_n[j]), 4), "blended": round(float(w[j]), 4)}
                for j, n in enumerate(names)}
+    if uses_ahp:   # the AHP weight of each criterion used, renormalised over the criteria that had data
+        for j, n in enumerate(names):
+            weights[n]["ahp"] = round(float(prior_n[j]), 4)
     source = "prior only (too few candidates)" if w_entropy is None else method
     detail = (f"mcdm {source}: {m} candidates -> top {len(out)}; weights "
               + ", ".join(f"{n} {weights[n]['blended']:.2f}" for n in names)
               + (f"; dropped {', '.join(dropped)}" if dropped else "")
               + f"; top-1 was retrieval rank {int(ranked[0]) + 1}")
+    if ahp_info is not None:
+        detail += (f"; prior AHP (CR {ahp_info['cr']:.3f})" if uses_ahp
+                   else f"; AHP rejected: {ahp_info['note']}")
     return RerankResult(similar=out, applied=True, method=method, weights=weights, dropped=dropped,
-                        explanations=explanations, detail=detail)
+                        explanations=explanations, detail=detail,
+                        prior_source="ahp" if uses_ahp else "typed", ahp=ahp_info)

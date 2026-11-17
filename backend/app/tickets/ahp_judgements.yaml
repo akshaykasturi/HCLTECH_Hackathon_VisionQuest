@@ -1,0 +1,33 @@
+# AHP pairwise judgements for the re-ranker's criteria (app/tickets/rerank.py, prior_source: ahp).
+# They replace only the hand-typed prior_weight numbers; entropy weights and TOPSIS are unchanged.
+#
+# Saaty scale, "row vs col": 1 = equally important, 2 = slightly more, 3 = moderately more, 5 = strongly more,
+# 1/2 ... 1/5 = less important. Only the upper triangle is written; the code fills in the reciprocals.
+# Accepted only if the consistency ratio (CR) is below 0.10; otherwise the typed priors are used.
+
+author: "Raswanth + Akhilesh (draft, decided before seeing results)"
+
+criteria: [dense_similarity, bm25, category_agreement, same_service, resolution_quality, age_days, analyst_feedback]
+
+judgements:
+  - {row: dense_similarity, col: bm25, value: 2, why: "meaning beats exact word overlap for paraphrased tickets"}
+  - {row: dense_similarity, col: category_agreement, value: 2, why: "same issue matters more than same broad category"}
+  - {row: dense_similarity, col: same_service, value: 3, why: "similar symptoms recur across services"}
+  - {row: dense_similarity, col: resolution_quality, value: 2, why: "a relevant ticket comes first, then how well it was fixed"}
+  - {row: dense_similarity, col: age_days, value: 5, why: "recency is a weak signal"}
+  - {row: dense_similarity, col: analyst_feedback, value: 4, why: "feedback is sparse early on"}
+  - {row: bm25, col: category_agreement, value: 1/2, why: "category agreement is the more reliable signal"}
+  - {row: bm25, col: same_service, value: 2, why: "shared error codes beat shared service"}
+  - {row: bm25, col: resolution_quality, value: 1, why: "equally important"}
+  - {row: bm25, col: age_days, value: 3, why: ""}
+  - {row: bm25, col: analyst_feedback, value: 2, why: ""}
+  - {row: category_agreement, col: same_service, value: 2, why: "category generalises across services"}
+  - {row: category_agreement, col: resolution_quality, value: 1, why: "equally important"}
+  - {row: category_agreement, col: age_days, value: 4, why: ""}
+  - {row: category_agreement, col: analyst_feedback, value: 3, why: ""}
+  - {row: same_service, col: resolution_quality, value: 1/2, why: "a verified fix matters more than the same service"}
+  - {row: same_service, col: age_days, value: 2, why: ""}
+  - {row: same_service, col: analyst_feedback, value: 2, why: ""}
+  - {row: resolution_quality, col: age_days, value: 4, why: "a verified fix stays useful even when old"}
+  - {row: resolution_quality, col: analyst_feedback, value: 3, why: ""}
+  - {row: age_days, col: analyst_feedback, value: 1/2, why: "human feedback beats recency"}

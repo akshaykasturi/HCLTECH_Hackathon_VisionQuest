@@ -43,7 +43,8 @@ def test_rerank_eval_runs_and_is_time_aware(ev, tmp_path):
     res = ev.rerank_eval("val", pool_k=4, top_n=2, rows=ROWS, data_dir=tmp_path)
     # A1 has no earlier gold ticket (A2, A3 are in its future): skipped when time-aware.
     assert res["n"] == 1 and res["skipped"] == 1
-    assert set(res["arms"]) == {"retrieval", "prior", "entropy", "blended"}
+    assert set(res["arms"]) == {"retrieval", "prior", "entropy", "blended", "ahp", "ahp_entropy"}
+    assert res["ahp"]["accepted"] and res["ahp"]["cr"] < 0.10
     assert res["arms"]["retrieval"]["recall"] == [1.0]   # A1 and A2 are the two best text matches
     for arm in res["arms"].values():
         assert all(0.0 <= v <= 1.0 for key in ("recall", "mrr", "ndcg") for v in arm[key])

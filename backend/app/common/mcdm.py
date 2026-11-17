@@ -172,6 +172,75 @@ def topsis(X, w: Sequence[float], benefit: Optional[Sequence[bool]] = None) -> T
     return TopsisResult(np.clip(closeness, 0.0, 1.0), d_plus, d_minus, contributions)
 
 
+# ---- AHP: prior weights from pairwise judgements ----------------------------------------------------
+
+# Saaty's random consistency index: the average CI of random reciprocal matrices of size n.
+SAATY_RI = {1: 0.0, 2: 0.0, 3: 0.58, 4: 0.90, 5: 1.12, 6: 1.24, 7: 1.32, 8: 1.41, 9: 1.45, 10: 1.49}
+CR_LIMIT = 0.10  # Saaty: a consistency ratio below 0.10 is acceptable
+
+
+def ahp_matrix_from_upper(names: Sequence[str], judgements: dict[tuple[str, str], float]) -> np.ndarray:
+    """Full n x n pairwise matrix from the upper triangle.
+
+    judgements[(row, col)] = how much more important row is than col (Saaty 1-9, or 1/2 ... 1/9 for less),
+    for every pair with row before col in `names`. The diagonal is 1 and a[col][row] = 1 / a[row][col].
+    Raises ValueError for a missing, extra, reversed or non-positive judgement.
+    """
+    index = {n: i for i, n in enumerate(names)}
+    if len(index) != len(names):
+        raise ValueError("criteria names must be unique")
+    n = len(names)
+    A = np.eye(n)
+    for (row, col), value in judgements.items():
+        if row not in index or col not in index:
+            raise ValueError(f"unknown criterion in judgement ({row}, {col})")
+        i, j = index[row], index[col]
+        if i >= j:
+            raise ValueError(f"judgement ({row}, {col}) must be in the upper triangle: {row} comes after {col}")
+        value = float(value)
+        if not np.isfinite(value) or value <= 0:
+            raise ValueError(f"judgement ({row}, {col}) must be > 0, got {value}")
+        A[i, j], A[j, i] = value, 1.0 / value
+    missing = [(names[i], names[j]) for i in range(n) for j in range(i + 1, n)
+               if (names[i], names[j]) not in judgements]
+    if missing:
+        raise ValueError(f"{len(missing)} judgement(s) missing, e.g. {missing[:3]}")
+    return A
+
+
+def ahp_weights(pairwise) -> tuple[np.ndarray, float]:
+    """(weights, consistency_ratio) of a pairwise comparison matrix.
+
+      weights   principal eigenvector (largest eigenvalue lambda_max), scaled to sum to 1
+      CI        (lambda_max - n) / (n - 1): 0 for perfectly consistent judgements
+      CR        CI / RI(n), Saaty's random index; CR < 0.10 is acceptable. For n <= 2, CR = 0.
+    Validates: square, every entry > 0, diagonal 1, reciprocal (a[j][i] == 1 / a[i][j]).
+    """
+    A = np.asarray(pairwise, dtype=float)
+    if A.ndim != 2 or A.shape[0] != A.shape[1] or A.shape[0] == 0:
+        raise ValueError(f"pairwise matrix must be square and non-empty, got shape {A.shape}")
+    if not np.isfinite(A).all() or (A <= 0).any():
+        raise ValueError("every pairwise entry must be a finite number > 0")
+    if not np.allclose(np.diag(A), 1.0):
+        raise ValueError("the diagonal must be 1 (a criterion is equally important as itself)")
+    if not np.allclose(A * A.T, 1.0, rtol=1e-6):
+        i, j = np.argwhere(~np.isclose(A * A.T, 1.0, rtol=1e-6))[0]
+        raise ValueError(f"not reciprocal: a[{j}][{i}] = {A[j, i]:g} but 1 / a[{i}][{j}] = {1 / A[i, j]:g}")
+    n = A.shape[0]
+    values, vectors = np.linalg.eig(A)
+    k = int(np.argmax(values.real))
+    lam_max = float(values[k].real)
+    w = np.abs(vectors[:, k].real)
+    w = w / w.sum()
+    if n <= 2:
+        return w, 0.0
+    ri = SAATY_RI.get(n)
+    if ri is None:
+        raise ValueError(f"no Saaty random index for n = {n} (supported: up to 10 criteria)")
+    ci = (lam_max - n) / (n - 1)
+    return w, max(ci / ri, 0.0)
+
+
 def order(closeness: Sequence[float], tie_rank: Optional[Sequence[int]] = None) -> np.ndarray:
     """Indices best first. Ties (to 12 decimals) keep the original order (tie_rank, default row order)."""
     c = np.round(np.asarray(closeness, dtype=float), 12)
