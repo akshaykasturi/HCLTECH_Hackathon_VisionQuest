@@ -242,6 +242,51 @@ export interface TicketQuery {
   status?: string;
 }
 
+// ---------- Review history: what the page works with ----------
+// Frontend shape only. The backend record (a PROVISIONAL shape: db/repo.py is not merged yet) and the adapter
+// that converts it live in lib/api.ts (HistoryRecordApi, toHistoryEntry). Pages never see backend field names.
+
+/** One feedback entry. Feedback is append-only: a changed opinion is a new entry and the newest counts. */
+export interface FeedbackEntry {
+  verdict: TicketVerdict;
+  note: string | null;          // masked by the backend
+  reviewer: string | null;      // null = not recorded
+  at: string | null;            // ISO time; null = not recorded
+  aboutTicketId: string | null; // set when the feedback is about one similar ticket, not the whole result
+}
+
+export interface ResolutionInfo {
+  resolvedAt: string;
+  resolvedBy: string | null;
+}
+
+/** One saved analysis as the Review History page shows it. */
+export interface HistoryEntry {
+  id: string;
+  analysedAt: string;
+  finishedAt: string | null;
+  analyst: string | null;
+  ticket: {
+    subject: string;
+    description: string | null;
+    service: string | null;
+    environment: string | null;
+    channel: string | null;
+  };
+  outcome: Outcome;
+  reasons: string[];
+  confidence: number | null;    // null = not stored: never shown as a number
+  classification: Classification | null;
+  recommendation: Recommendation | null;
+  findings: Finding[];
+  evidence: string[];           // IDs of the tickets / KB sections used (their text is not stored)
+  generator: string | null;
+  classifierVersion: string | null;
+  promptVersion: string | null;
+  feedback: FeedbackEntry[];
+  resolution: ResolutionInfo | null;
+}
+
 /** POST /api/tickets/results/{result_id}/feedback body (FeedbackIn). */
 export interface TicketFeedbackIn {
   verdict: TicketVerdict;

@@ -1,7 +1,7 @@
 // One HTTP client for the FastAPI backend. Every response is the {ok, data, error} envelope.
 // Errors are normalised into ApiError so screens can show one consistent message and retry.
 import type {
-  AnalysisResult, ChainStatus, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
+  AnalysisResult, ChainStatus, Classification, FeedbackEntry, Finding, HistoryEntry, Recommendation, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
   ResultSummary, SavedResult, Taxonomy, TicketDetail, TicketFeedbackIn, TicketIn, TicketQuery, TicketSummary, User,
 } from "./types";
 import { OUTCOMES, ROLES } from "./types";
@@ -210,6 +210,125 @@ export function assertTicket(data: unknown): TicketDetail {
   return data as unknown as TicketDetail;
 }
 
+// ---------- Review history adapter: GET /api/tickets/history ----------
+// PROVISIONAL CONTRACT. db/repo.history() (Raswanth) is not merged; until it is, the route answers 503
+// DB_NOT_READY. HistoryRecordApi is our proposal, built only from the documented table columns in
+// docs/ARCHITECTURE.md ("Database": analysis_results, feedback, resolutions) with their own names.
+// Backend field names stay in this block: when the real response is known, change HistoryRecordApi and
+// toHistoryEntry() only. Pages use HistoryEntry (lib/types.ts).
+
+/** One feedback row as the backend is expected to send it (table `feedback`). */
+export interface HistoryFeedbackApi {
+  verdict: string;
+  note_masked?: string | null;
+  reviewer_id?: string | null;
+  target?: "result" | "match" | null;
+  target_id?: string | null;
+  created_at?: string | null;
+}
+
+/** One saved analysis as the backend is expected to send it (tables analysis_results + feedback + resolutions). */
+export interface HistoryRecordApi {
+  result_id: string;
+  created_at: string;
+  recommended_at?: string | null;
+  user_id?: string | null;
+  ticket_masked: { subject: string; description?: string | null; affected_service?: string | null;
+                   environment?: string | null; channel?: string | null };
+  classification?: Classification | null;
+  evidence_ids?: string[] | null;
+  outcome: string;
+  reasons?: string[] | null;
+  confidence?: number | null;
+  recommendation?: Recommendation | null;
+  findings?: Finding[] | null;
+  generator?: string | null;
+  model_version?: string | null;
+  prompt_version?: string | null;
+  feedback?: HistoryFeedbackApi[] | null;
+  resolution?: { resolved_by?: string | null; resolved_at: string } | null;
+}
+
+const VERDICTS = ["useful", "incorrect", "unresolved"];
+
+/** null/undefined -> null; a string stays; anything else is malformed. */
+function optText(value: unknown, what: string): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") invalid(what);
+  return value;
+}
+
+/** null/undefined -> []; an array whose items pass `ok` stays; anything else is malformed. */
+function optList<T>(value: unknown, ok: (item: unknown) => boolean, what: string): T[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value) || !value.every(ok)) invalid(what);
+  return value as T[];
+}
+
+function toFeedbackEntry(row: unknown): FeedbackEntry {
+  if (!isRecord(row) || !VERDICTS.includes(row.verdict as string)) invalid("feedback entry");
+  const target = row.target ?? "result";
+  if (target !== "result" && target !== "match") invalid("feedback entry");
+  return {
+    verdict: row.verdict as FeedbackEntry["verdict"],
+    note: optText(row.note_masked, "feedback note"),
+    reviewer: optText(row.reviewer_id, "feedback reviewer"),
+    at: optText(row.created_at, "feedback time"),
+    aboutTicketId: target === "match" ? optText(row.target_id, "feedback target") : null,
+  };
+}
+
+/** The adapter: one backend history record -> HistoryEntry. Throws INVALID_RESPONSE for malformed data. */
+export function toHistoryEntry(raw: unknown): HistoryEntry {
+  if (!isRecord(raw) || typeof raw.result_id !== "string" || !raw.result_id || typeof raw.created_at !== "string"
+      || !OUTCOMES.includes(raw.outcome as never)) invalid("history record");
+  const t = raw.ticket_masked;
+  if (!isRecord(t) || typeof t.subject !== "string") invalid("history record");
+  const conf = raw.confidence;
+  if (conf !== null && conf !== undefined && (typeof conf !== "number" || Number.isNaN(conf) || conf < 0 || conf > 1)) {
+    invalid("confidence");
+  }
+  for (const key of ["classification", "recommendation"] as const) {
+    if (raw[key] !== null && raw[key] !== undefined && !isRecord(raw[key])) invalid(key);
+  }
+  if (isRecord(raw.recommendation) && !Array.isArray(raw.recommendation.steps)) invalid("recommendation");
+  const res = raw.resolution;
+  if (res !== null && res !== undefined && (!isRecord(res) || typeof res.resolved_at !== "string")) invalid("resolution");
+
+  return {
+    id: raw.result_id,
+    analysedAt: raw.created_at,
+    finishedAt: optText(raw.recommended_at, "recommended_at"),
+    analyst: optText(raw.user_id, "user_id"),
+    ticket: {
+      subject: t.subject,
+      description: optText(t.description, "ticket description"),
+      service: optText(t.affected_service, "affected_service"),
+      environment: optText(t.environment, "environment"),
+      channel: optText(t.channel, "channel"),
+    },
+    outcome: raw.outcome as HistoryEntry["outcome"],
+    reasons: optList<string>(raw.reasons, (r) => typeof r === "string", "reasons"),
+    confidence: typeof conf === "number" ? conf : null, // missing stays missing: never shown as 0%
+    classification: (raw.classification ?? null) as Classification | null,
+    recommendation: (raw.recommendation ?? null) as Recommendation | null,
+    findings: optList<Finding>(raw.findings, isRecord, "findings"),
+    evidence: optList<string>(raw.evidence_ids, (r) => typeof r === "string", "evidence_ids"),
+    generator: optText(raw.generator, "generator"),
+    classifierVersion: optText(raw.model_version, "model_version"),
+    promptVersion: optText(raw.prompt_version, "prompt_version"),
+    feedback: optList<unknown>(raw.feedback, () => true, "feedback").map(toFeedbackEntry),
+    resolution: isRecord(res) ? { resolvedAt: res.resolved_at as string,
+                                  resolvedBy: optText(res.resolved_by, "resolved_by") } : null,
+  };
+}
+
+/** GET /api/tickets/history data -> HistoryEntry[] (every record through the adapter). */
+export function assertHistory(data: unknown): HistoryEntry[] {
+  if (!Array.isArray(data)) invalid("history list");
+  return data.map(toHistoryEntry);
+}
+
 /** "?q=vpn&priority=P1" from the set values only (empty strings are left out). */
 export function ticketQueryString(query: TicketQuery): string {
   const params = new URLSearchParams();
@@ -255,6 +374,8 @@ export function makeEndpoints(client: ApiClient) {
       client.request<unknown>("/api/tickets/taxonomy", { signal }).then(assertTaxonomy),
     searchTickets: (query: TicketQuery, signal?: AbortSignal) =>
       client.request<unknown>(`/api/tickets${ticketQueryString(query)}`, { signal }).then(assertTicketList),
+    history: (limit: number, offset: number, signal?: AbortSignal) =>
+      client.request<unknown>(`/api/tickets/history?limit=${limit}&offset=${offset}`, { signal }).then(assertHistory),
     ticket: (ticketId: string, signal?: AbortSignal) =>
       client.request<unknown>(`/api/tickets/${id(ticketId)}`, { signal }).then(assertTicket),
     ticketFeedback: (resultId: string, body: TicketFeedbackIn, signal?: AbortSignal) =>

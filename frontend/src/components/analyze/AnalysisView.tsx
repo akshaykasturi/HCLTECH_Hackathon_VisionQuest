@@ -42,7 +42,17 @@ const OUTCOME: Record<Outcome, { title: string; text: string; icon: ReactNode; b
   },
 };
 
-function OutcomeBanner({ result }: { result: AnalysisResult }) {
+/** What the outcome banner needs: a live AnalysisResult has all of it; a saved history result may lack some. */
+export interface OutcomeInfo {
+  outcome: Outcome;
+  confidence?: number | null;     // missing = not shown (never displayed as 0%)
+  reasons: string[];
+  question?: string | null;
+  escalation_group?: string | null;
+  screen?: { codes: string[] } | null;
+}
+
+export function OutcomeBanner({ result }: { result: OutcomeInfo }) {
   const o = OUTCOME[result.outcome];
   const dark = result.outcome === "BLOCKED";
   return (
@@ -65,20 +75,29 @@ function OutcomeBanner({ result }: { result: AnalysisResult }) {
           {result.outcome === "ESCALATE" && result.escalation_group && (
             <p className="mt-3 text-sm text-ink">Route to <strong>{result.escalation_group}</strong></p>
           )}
-          {result.outcome === "BLOCKED" && result.screen.codes.length > 0 && (
+          {result.outcome === "BLOCKED" && result.screen && result.screen.codes.length > 0 && (
             <p className="mt-3 text-sm text-slate-200">Screen codes: {result.screen.codes.join(", ")}</p>
           )}
-          <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${dark ? "text-slate-300" : "text-slate-600"}`}>
-            <span>Decision confidence <strong className={dark ? "text-white" : "text-ink"}>{pct(result.confidence)}</strong></span>
-            {result.reasons.length > 0 && <span>Reasons: <span className="font-mono">{result.reasons.join(", ")}</span></span>}
-          </div>
+          {(typeof result.confidence === "number" || result.reasons.length > 0) && (
+            <div className={`mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${dark ? "text-slate-300" : "text-slate-600"}`}>
+              {typeof result.confidence === "number" && (
+                <span>Decision confidence <strong className={dark ? "text-white" : "text-ink"}>{pct(result.confidence)}</strong></span>
+              )}
+              {result.reasons.length > 0 && <span>Reasons: <span className="font-mono">{result.reasons.join(", ")}</span></span>}
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function ClassificationCard({ classification }: { classification: Classification | null }) {
+const NO_CLASSIFICATION = "No classification was returned. The classifier is not connected yet, so category, "
+  + "subcategory and priority are not shown.";
+
+/** emptyMessage: what to say when there is no classification (the Analyze page's wording by default). */
+export function ClassificationCard({ classification, emptyMessage = NO_CLASSIFICATION }:
+  { classification: Classification | null; emptyMessage?: string }) {
   return (
     <Card>
       <CardHeader title="Classification" icon={<Tags className="h-5 w-5" />} />
@@ -97,10 +116,7 @@ function ClassificationCard({ classification }: { classification: Classification
           )}
         </div>
       ) : (
-        <p className="p-5 text-sm text-muted">
-          No classification was returned. The classifier is not connected yet, so category, subcategory and priority
-          are not shown.
-        </p>
+        <p className="p-5 text-sm text-muted">{emptyMessage}</p>
       )}
     </Card>
   );
@@ -110,7 +126,7 @@ function sourceLabel(sourceId: string) {
   return sourceId.startsWith("doc:") ? "Knowledge base" : "Past ticket";
 }
 
-function StepsCard({ recommendation, findings }: { recommendation: Recommendation; findings: AnalysisResult["findings"] }) {
+export function StepsCard({ recommendation, findings }: { recommendation: Recommendation; findings: AnalysisResult["findings"] }) {
   return (
     <Card>
       <CardHeader title="Recommended resolution steps" icon={<ListChecks className="h-5 w-5" />}
@@ -226,7 +242,7 @@ const VERDICTS: { value: TicketVerdict; label: string; icon: ReactNode }[] = [
   { value: "unresolved", label: "Unresolved", icon: <HelpCircle className="h-4 w-4" aria-hidden /> },
 ];
 
-function FeedbackCard({ resultId }: { resultId: string }) {
+export function FeedbackCard({ resultId, onSaved }: { resultId: string; onSaved?: () => void }) {
   const { api } = useAppData();
   const { notify } = useToast();
   const [verdict, setVerdict] = useState<TicketVerdict | null>(null);
@@ -244,6 +260,7 @@ function FeedbackCard({ resultId }: { resultId: string }) {
       await api.ticketFeedback(resultId, { verdict, ...(note.trim() ? { note: note.trim() } : {}) });
       setSaved(true);
       notify("Thanks, your feedback was saved.");
+      onSaved?.();
     } catch (err) {
       setError(err);
     } finally {

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  ApiError, assertAnalysis, assertHealth, assertLogin, assertResult, createApiClient, describeError, makeEndpoints,
+  ApiError, assertAnalysis, assertHealth, assertHistory, assertLogin, assertResult, createApiClient, describeError,
+  makeEndpoints, toHistoryEntry,
 } from "./api";
+import { HISTORY_OPEN, HISTORY_RESOLVED } from "../test/fixtures";
 import { HEALTH_OK } from "../test/fixtures";
 
 function fetchReturning(status: number, body: string | object, headers: Record<string, string> = {}) {
@@ -175,5 +177,84 @@ describe("ticket response checks", () => {
     expect(describeError(new ApiError("http", "DB_NOT_READY", "x", 503)).retryable).toBe(false);
     expect(describeError(new ApiError("http", "INVALID_LOGIN", "x", 401)).title).toBe("Sign-in failed");
     expect(describeError(new ApiError("http", "VALIDATION_ERROR", "subject: too short", 400)).title).toBe("Check the form");
+  });
+});
+
+describe("history adapter (toHistoryEntry)", () => {
+  const BACKEND_NAMES = ["result_id", "created_at", "recommended_at", "user_id", "ticket_masked", "evidence_ids",
+                         "model_version", "prompt_version", "note_masked", "reviewer_id", "target_id", "resolved_by",
+                         "resolved_at", "affected_service"];
+  // Every key in the result, except inside the shared Analyze shapes (classification, recommendation, findings).
+  const allKeys = (v: unknown): string[] => (v && typeof v === "object"
+    ? Object.entries(v as Record<string, unknown>).flatMap(([k, x]) =>
+        ["classification", "recommendation", "findings"].includes(k) ? [k] : [k, ...allKeys(x)])
+    : []);
+
+  it("maps a full backend record to the frontend shape", () => {
+    const e = toHistoryEntry(HISTORY_RESOLVED);
+    expect(e.id).toBe(HISTORY_RESOLVED.result_id);
+    expect(e.analysedAt).toBe(HISTORY_RESOLVED.created_at);
+    expect(e.analyst).toBe("asha");
+    expect(e.ticket).toEqual({ subject: "VPN drops every few minutes", description: HISTORY_RESOLVED.ticket_masked.description,
+                               service: "Corporate VPN", environment: "production", channel: "portal" });
+    expect(e.evidence).toEqual(["INC-100045", "doc:KB-004#4"]);
+    expect(e.confidence).toBe(0.86);
+    expect(e.classifierVersion).toBe("tfidf-v1");
+    expect(e.feedback).toEqual([
+      { verdict: "useful", note: "Step 1 fixed it", reviewer: "asha", at: "2026-11-16T09:10:00+00:00", aboutTicketId: null },
+      { verdict: "incorrect", note: null, reviewer: "ravi", at: "2026-11-16T10:00:00+00:00", aboutTicketId: "INC-100777" },
+    ]);
+    expect(e.resolution).toEqual({ resolvedAt: "2026-11-16T12:20:00+00:00", resolvedBy: "asha" });
+  });
+
+  it("keeps backend field names out of what it returns", () => {
+    const keys = allKeys(toHistoryEntry(HISTORY_RESOLVED));
+    expect(keys.filter((k) => BACKEND_NAMES.includes(k))).toEqual([]);
+  });
+
+  it("turns null or missing lists into empty lists and keeps valid values", () => {
+    const e = toHistoryEntry({ ...HISTORY_RESOLVED, evidence_ids: null, findings: null, reasons: null, feedback: null });
+    expect([e.evidence, e.findings, e.reasons, e.feedback]).toEqual([[], [], [], []]);
+    const { evidence_ids: _a, findings: _b, reasons: _c, feedback: _d, resolution: _e, ...lean } = HISTORY_RESOLVED;
+    void [_a, _b, _c, _d, _e];
+    const m = toHistoryEntry(lean);
+    expect([m.evidence, m.findings, m.reasons, m.feedback, m.resolution]).toEqual([[], [], [], [], null]);
+    expect(toHistoryEntry(HISTORY_RESOLVED).reasons).toEqual(["STRONG_MATCH"]);
+  });
+
+  it("keeps a missing confidence missing (never 0) and keeps a real 0", () => {
+    const { confidence: _c, ...noConf } = HISTORY_RESOLVED; void _c;
+    expect(toHistoryEntry(noConf).confidence).toBeNull();
+    expect(toHistoryEntry({ ...HISTORY_RESOLVED, confidence: null }).confidence).toBeNull();
+    expect(toHistoryEntry({ ...HISTORY_RESOLVED, confidence: 0 }).confidence).toBe(0);
+  });
+
+  it("handles optional feedback fields and a missing resolution", () => {
+    const e = toHistoryEntry(HISTORY_OPEN);
+    expect(e.feedback).toEqual([{ verdict: "unresolved", note: null, reviewer: null, at: null, aboutTicketId: null }]);
+    expect(e.resolution).toBeNull();
+    expect(e.ticket.service).toBeNull();
+  });
+
+  it.each([
+    ["a list that is not a list", { evidence_ids: "INC-1" }],
+    ["a list with wrong items", { reasons: [1, 2] }],
+    ["an unknown outcome", { outcome: "MAYBE" }],
+    ["an unknown feedback verdict", { feedback: [{ verdict: "great" }] }],
+    ["a feedback target that is not result or match", { feedback: [{ verdict: "useful", target: "user" }] }],
+    ["a confidence that is not a probability", { confidence: "high" }],
+    ["a confidence above 1", { confidence: 86 }],
+    ["a resolution without a time", { resolution: { resolved_by: "asha" } }],
+    ["a ticket without a subject", { ticket_masked: { description: "x" } }],
+    ["a missing result id", { result_id: "" }],
+    ["a number where a name should be", { user_id: 42 }],
+  ])("rejects %s", (_name, patch) => {
+    expect(() => toHistoryEntry({ ...HISTORY_RESOLVED, ...patch })).toThrow(ApiError);
+  });
+
+  it("checks every record in a history list", () => {
+    expect(assertHistory([HISTORY_RESOLVED, HISTORY_OPEN]).map((e) => e.id)).toEqual([HISTORY_RESOLVED.result_id, "res-clarify-0002"]);
+    expect(() => assertHistory([HISTORY_RESOLVED, { result_id: "x" }])).toThrow(ApiError);
+    expect(() => assertHistory({ items: [] })).toThrow(ApiError);
   });
 });

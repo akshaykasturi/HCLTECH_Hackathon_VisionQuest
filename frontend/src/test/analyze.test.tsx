@@ -76,6 +76,8 @@ describe("analyze page", () => {
     const banner = await screen.findByRole("region", { name: "Outcome: More information needed" });
     expect(within(banner).getByText(RESULT_CLARIFY.question!)).toBeInTheDocument();
     expect(screen.getByText(/No classification was returned/)).toBeInTheDocument();
+    expect(screen.getByText(/The classifier is not connected yet/)).toBeInTheDocument(); // Analyze keeps its wording
+    expect(within(banner).getByText("31%")).toBeInTheDocument(); // a supplied confidence is still shown
     expect(screen.queryByText(/^Confidence \d+%$/)).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Recommended resolution steps" })).not.toBeInTheDocument();
   });

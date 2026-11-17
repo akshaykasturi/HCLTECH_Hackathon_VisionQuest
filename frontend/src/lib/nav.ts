@@ -1,12 +1,13 @@
-import { Activity, ScrollText, Sparkles, Ticket } from "lucide-react";
+import { Activity, History, ScrollText, Sparkles, Ticket } from "lucide-react";
 
 export const APP_NAME = "VisionQuest";
 export const ANALYST_HOME = "/analyst/analyze";
 
-// Analyst console pages (sidebar). Review history and Dashboard are added here as they are built.
+// Analyst console pages (sidebar). Dashboard is added here when it is built.
 export const NAV_ITEMS = [
   { to: "/analyst/analyze", label: "Analyze", Icon: Sparkles, end: false },
   { to: "/analyst/tickets", label: "Tickets", Icon: Ticket, end: false },
+  { to: "/analyst/history", label: "Review History", Icon: History, end: false },
   { to: "/analyst/audit", label: "Audit History", Icon: ScrollText, end: false },
   { to: "/analyst/system-health", label: "System Health", Icon: Activity, end: false },
 ] as const;
