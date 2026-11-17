@@ -1,0 +1,40 @@
+# Word patterns for app/tickets/screen.py. Change patterns here, not in code.
+# Each pattern is a regular expression, matched on lower-case text with single spaces.
+# Keep them narrow: a ticket ABOUT security ("I got a phishing email") is a normal ticket, not an attack.
+
+# Attacks on the assistant -> ScreenResult.blocked = True -> outcome BLOCKED (no search, no LLM).
+blocked:
+  INJECTION_PATTERN:
+    - '\b(ignore|disregard|forget|override|bypass)\s+(all\s+|any\s+|the\s+|your\s+|these\s+)*(previous|prior|above|earlier|system|original)?\s*(instructions?|rules|prompts?|guidelines|guardrails)\b'
+    - '\b(reveal|show|print|repeat|leak)\s+(me\s+)?(your|the)\s+(system\s+)?(prompt|instructions)\b'
+    - '\bsystem\s+prompt\b'
+    - '</?\s*(system|assistant|instructions?)\s*>'
+    - '^#{2,}\s*(system|instructions?)\b|\s#{2,}\s*(system|instructions?)\b'
+  ROLE_OVERRIDE:
+    - '\byou\s+are\s+now\s+(a|an|the|my|dan|in\s+developer)\b'
+    - '\b(pretend|imagine)\s+(to\s+be|you\s+are)\b'
+    - '\bact\s+as\s+(an?\s+)?(admin|administrator|root|system|developer|dan|unrestricted)\b'
+    - '\b(developer|god|dan|jailbreak)\s+mode\b'
+    - '\bjailbreak'
+  CREDENTIAL_REQUEST:
+    # Asking for someone else's secret. "Reset my password" and "Outlook asks for my password" are normal tickets.
+    - '\b(give|send|share|tell|show|list|reveal|provide|email|dump|export)\s+(me\s+)?(the\s+|all\s+|every\s+|his\s+|her\s+|their\s+|other\s+|another\s+|admin\s+|administrator\s+|root\s+|service\s+account\s+|\w+''s\s+)+(users?''?\s+|employees?''?\s+)?(passwords?|credentials|api\s+keys?|tokens?|secrets?)\b(?!\s*(reset|expir|change|polic|rules|requirements))'
+    - '\b(what\s+is|what''s)\s+(the|his|her|their|\w+''s)\s+(admin\s+|root\s+)?(password|credentials|api\s+key)\b(?!\s*(reset|expir|change|polic|rules|requirements))'
+  OTHER_USER_DATA:
+    - '\b(list|show|export|dump|give\s+me|send\s+me)\s+(all|every|the\s+whole|the\s+entire)\s+(users?|employees?|staff|customers?)(''s|'')?\s+(emails?|phone|numbers|salar|address|personal|data|details|records|tickets)'
+    - '\b(dump|export|download)\s+(the\s+)?(whole\s+|entire\s+)?(user|users|employee|customer)\s+(table|database|db|list)\b'
+    - '\bselect\s+\*\s+from\b|\bdrop\s+table\b|\bunion\s+select\b'
+
+# Physical hazards -> ScreenResult.safety = True -> ESCALATE as P1. People before laptops.
+# IT words that look like hazards are excluded: "smoke test", "Apache Spark job", "memory spill to disk".
+safety:
+  SAFETY_SMOKE: ['\bsmok(e|ing|y)\b(?![\s-]*test)']
+  SAFETY_FIRE: ['\bon\s+fire\b', '\bcaught\s+fire\b', '\bflames?\b', '\bfire\s+alarm\b']
+  SAFETY_BURNING: ['\bburning\s+(smell|odou?r|plastic)\b', '\bsmells?\s+(like\s+)?burn', '\bscorch']
+  SAFETY_SPARKS: ['\bspark(s|ing|ed)\b(?!\s+(job|cluster|session|executor|driver|sql|streaming|app))']
+  SAFETY_SHOCK: ['\belectric(al)?\s+shock\b', '\belectrocut', '\bgot\s+(a\s+)?shock(ed)?\b', '\bexposed\s+wires?\b']
+  SAFETY_BATTERY: ['\b(swollen|swelling|bulging|puffed|puffy|leaking)\s+battery\b', '\bbattery\s+(is\s+)?(swollen|swelling|bulging|leaking|expanding)\b']
+  SAFETY_SPILL:
+    - '\b(spill(ed|t|s)?|knocked\s+over)\b.{0,40}\b(coffee|water|tea|drink|liquid|juice|soda)\b'
+    - '\b(coffee|water|tea|drink|liquid|juice|soda)\b.{0,40}\bspill'
+    - '\bwater\s+(leak|leaking|dripping)\b'
