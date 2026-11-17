@@ -1,0 +1,47 @@
+{
+  "ticket": {
+    "subject": "VPN won't connect, error 809",
+    "description": "Since this morning the VPN client fails with error 809 when I try to connect from home. Wi-Fi works fine.",
+    "affected_service": "VPN",
+    "environment": "laptop",
+    "channel": "portal"
+  },
+  "classification": {
+    "category": {"label": "Network", "prob": 0.88},
+    "subcategory": {"label": "VPN", "prob": 0.81},
+    "priority": {"label": "P3", "prob": 0.64},
+    "top3_category": [{"label": "Network", "prob": 0.88}, {"label": "Access", "prob": 0.07}, {"label": "Software", "prob": 0.03}],
+    "key_terms": ["vpn", "error 809", "connect"],
+    "model_version": "fixture"
+  },
+  "similar": [
+    {
+      "ticket_id": "INC10432", "subject": "VPN error 809 from home network", "category": "Network", "subcategory": "VPN",
+      "status": "Resolved", "score": 0.81, "match": "likely_duplicate",
+      "why": ["same affected_service", "same error code 809"],
+      "resolution_text": "Reset the VPN client profile and reconnect using the new certificate. Confirmed the user's home router allows IPsec passthrough."
+    },
+    {
+      "ticket_id": "INC10977", "subject": "VPN disconnects every few minutes", "category": "Network", "subcategory": "VPN",
+      "status": "Resolved", "score": 0.52, "match": "related",
+      "why": ["same affected_service"],
+      "resolution_text": "Updated the VPN client to the latest version and disabled power saving on the Wi-Fi adapter."
+    },
+    {
+      "ticket_id": "INC11205", "subject": "VPN password expired", "category": "Access", "subcategory": "Password Reset",
+      "status": "Resolved", "score": 0.37, "match": "weak", "lookalike": true,
+      "why": ["keyword overlap only: vpn"],
+      "resolution_text": "Reset the user's directory password and asked them to sign in to the VPN again."
+    }
+  ],
+  "kb": [
+    {
+      "section_id": "doc:kb/vpn-troubleshooting#2", "title": "VPN error 809", "score": 0.74,
+      "text": "Error 809 means the VPN tunnel could not be established. Reset the VPN client profile, then check that the home router allows IPsec passthrough."
+    },
+    {
+      "section_id": "doc:kb/vpn-troubleshooting#3", "title": "Reinstalling the VPN client", "score": 0.41,
+      "text": "If resetting the profile does not help, uninstall the VPN client, restart the laptop and install the current version from the software portal."
+    }
+  ]
+}

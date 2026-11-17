@@ -36,9 +36,15 @@ These are guidance, not locks: anyone may help on any part, and people may switc
 
 ## Where things go
 
+- Read `docs/PLAN.md` (who owns which file, the function signatures) and `docs/ARCHITECTURE.md` before coding.
+- Shared data shapes: `backend/app/tickets/models.py`. Change them only through Akshay; tell the group.
+- Pipeline steps: `backend/app/tickets/`. Login: `backend/app/auth/`. Database: `backend/app/db/` (only
+  `db/repo.py` talks to the database). Routes: `backend/app/api/` (thin: validate, check login, call the pipeline).
 - Shared building blocks: `backend/app/common/` (masking, docs, search, audit, LLM, checks, trace).
-- Problem code: a new folder under `backend/app/` named after the problem. Tests: `backend/tests/`.
-- Evaluation helpers: `backend/app/analysis/` (`stats.py`, `baselines.py`).
+- Evaluation helpers: `backend/app/analysis/` (`stats.py`, `baselines.py`). Scripts: `backend/scripts/`.
+- Tests: `backend/tests/`. Work before search exists with `backend/tests/fixtures/sample_evidence.json`.
+- Raw ticket text exists only inside steps 1-2 of the pipeline. Never log, store, trace or send it anywhere.
+- Edit only the files you own (docs/PLAN.md). Need a change in someone else's file? Ask them.
 
 ## Talking to the human
 

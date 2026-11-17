@@ -8,6 +8,10 @@ pypdf>=5.0
 numpy>=2.0
 rank-bm25>=0.2.2
 fastembed>=0.9
+# Login and permanent database
+sqlalchemy>=2.0
+psycopg[binary]>=3.2
+pyjwt>=2.9
 # Evaluation baselines
 scikit-learn>=1.5
 # Tests
