@@ -29,6 +29,7 @@ NORMAL = [
     ("Legal team printer", "The printer on the legal team floor jams every morning."),
     ("Server room badge", "My badge does not open the server room door, I need access."),
     ("Warm laptop", "My laptop gets warm and the fan is loud during Teams calls."),
+    ("No signal in corner office", "Signal is weak in the meeting room; calls drop and pages load slowly."),
     # Everyday tickets that mention secrets, logs or security words without asking to be handed anything.
     ("Build agent broken", "The PATH environment variables are wrong after the update."),
     ("Mobile app", "Authentication tokens expire too fast in the mobile app."),
@@ -163,6 +164,12 @@ def test_instruction_hidden_in_base64_is_found():
 
 def test_ordinary_long_ids_are_not_mistaken_for_base64_attacks():
     assert screen(ticket("Licence", "Activation key ABCDEFGH12345678WXYZ and build 20261117abcdef01 fail.")).codes == []
+
+
+def test_rules_do_not_read_across_two_fields():
+    # "calls drop" in the description + environment "production" is not "drop ... production".
+    t = ticket("No signal", "Calls drop and pages load slowly.", environment="production")
+    assert screen(t).codes == []
 
 
 def test_attack_in_another_field_is_found():

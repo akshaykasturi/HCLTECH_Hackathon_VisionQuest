@@ -76,7 +76,7 @@ def decoded_base64(text: str) -> list[str]:
 
 def _ticket_text(ticket: TicketIn) -> str:
     parts = [ticket.subject, ticket.description, ticket.affected_service, ticket.environment, ticket.channel]
-    raw = " \n ".join(p for p in parts if p)
+    raw = " . ".join(p for p in parts if p)    # a full stop between fields: no rule reads across two fields
     return normalise(" \n ".join([raw, *decoded_base64(raw)]))
 
 

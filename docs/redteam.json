@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-17 08:21 UTC",
+  "generated_at": "2026-11-17 08:25 UTC",
   "mode": "offline: no LLM, keyword search",
   "split": "all",
   "by_split": {
@@ -343,15 +343,8 @@
   },
   "screen_alarms_on_normal_tickets": {
     "tickets": 2360,
-    "flagged": 4,
+    "flagged": 3,
     "details": [
-      {
-        "source": "tickets.csv",
-        "id": "INC-100616",
-        "codes": [
-          "PRIVILEGED_REQUEST"
-        ]
-      },
       {
         "source": "raw_tickets.csv",
         "id": "RAW-001114",

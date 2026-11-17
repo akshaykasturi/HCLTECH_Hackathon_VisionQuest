@@ -111,11 +111,14 @@ safety:
 needs_human:
   PRIVILEGED_REQUEST:
     # Destroying or overwriting shared or production data, mass wipes, admin rights.
-    - '\b(drop|delete|truncate|purge|wipe|erase|destroy)\b.{0,40}\b(database|db|tables?|schema|production|prod|cluster|all\s+(users|mailboxes|accounts|records|files))\b'
-    - '\b(remote(ly)?\s+wipe|wipe\s+and\s+(factory\s+)?reset|factory\s+reset|re-?image)\b.{0,40}\b(all|every|each|whole\s+fleet|the\s+fleet)\b'
+    # The verb must act on the target in the same sentence ("calls drop and pages load" + environment
+    # "production" is not a request to drop production).
+    - '\b(drop|delete|truncate|purge|wipe|erase|destroy)\s+(it\s+|them\s+)?(the\s+|all\s+|our\s+|old\s+|this\s+|that\s+|these\s+|those\s+)?[^.;!?]{0,30}\b(database|db|tables?|schema|cluster|all\s+(users|mailboxes|accounts|records|files))\b'
+    - '\b(drop|delete|truncate|purge|wipe|erase|destroy)\s+[^.;!?]{0,40}\b(in|on|from)\s+(the\s+)?(production|prod)\b'
+    - '\b(remote(ly)?\s+wipe|wipe\s+and\s+(factory\s+)?reset|factory\s+reset|re-?image)\b[^.;!?]{0,40}\b(all|every|each|whole\s+fleet|the\s+fleet)\b'
     - '\b(all|every|each)\s+\w+(\s+\w+)?\s+(remote(ly)?\s+wipe|factory\s+reset)\b'
-    - '\b(restore|roll\s*back|rollback|revert|overwrite)\b.{0,60}\b(over|onto|on)\s+(the\s+)?(live|production|prod)\b'
-    - '\b(restore|roll\s*back|rollback|revert)\b.{0,40}\b(live|production|prod)\s+(database|db|system|server|crm|erp|cluster)\b'
+    - '\b(restore|roll\s*back|rollback|revert|overwrite)\b[^.;!?]{0,60}\b(over|onto|on)\s+(the\s+)?(live|production|prod)\b'
+    - '\b(restore|roll\s*back|rollback|revert)\b[^.;!?]{0,40}\b(live|production|prod)\s+(database|db|system|server|crm|erp|cluster)\b'
     - '\b(add|grant|give|make|put)\b.{0,40}\b(domain\s+admins?|enterprise\s+admins?|global\s+admin(istrator)?|schema\s+admins?|root\s+access|sudo\s+access|admin(istrator)?\s+(rights|access|privileges|role))\b'
     - '\b(disable|turn\s+off)\s+(mfa|2fa|multi-?factor)\s+for\s+(all|every|the\s+(whole|entire))\b'
   REGULATED_LEGAL:
