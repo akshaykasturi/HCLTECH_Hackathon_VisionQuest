@@ -12,8 +12,17 @@ safe_user_actions:
   - '\b(shut\s*down|shutdown)\s+(the\s+|your\s+)?(laptop|computer|pc|desktop|machine|device)\b'
   - '\bdisabl(e|es|ed|ing)\s+(the\s+)?(power\s+saving|battery\s+saver|(browser\s+)?(extensions?|add-?ins?|add-?ons?)|wi-?fi\s+power\s+management)\b'
   - '\bdelet(e|es|ed|ing)\s+(the\s+)?(browser\s+)?(cache|cookies|temp(orary)?\s+files|cached\s+credentials)\b'
-  - '\b(flush|flushed|flushing)\s+(the\s+)?(local\s+)?dns(\s+cache)?\b'
+  - '\b(flush|flushed|flushing)\s+(the\s+|their\s+|your\s+|my\s+)?(local\s+)?dns(\s+cache)?\b'
   - '\b(clear|purge|purged|purging)\s+(the\s+)?(browser\s+)?(cache|cookies)\b'
+  # Not commands at all: "drop" meaning "go down" ("confirm the error rate drops") and "restart" as a noun
+  # ("recovered after the restart"). These only ever describe what to watch for.
+  - '\b(rate|rates|times?|utili[sz]ation|errors?|latency|usage|load|count|queue|cpu|memory|traffic|volume|numbers?)\s+(should\s+|to\s+)?drops?\b'
+  # A state being checked, not changed: "confirm the account is disabled", "failed at the disable step".
+  - '\b(is|are|was|were|be|been|being)\s+(now\s+|still\s+|already\s+)?(disabled|deleted|revoked|rotated|restarted|purged)\b'
+  - '\bthe\s+(disable|restart|delete|rollback|roll\s+back)\s+step\b'
+  - '\b(after|before|during|since)\s+(the|a|its|their)\s+restart\b'
+  # The user tidying their own mailbox or files.
+  - '\bhelp\s+the\s+user\s+(move\s+or\s+|archive\s+or\s+)?delete\s+(large\s+|old\s+)*(items|emails|mail|messages|files)\b'
 
 # Shown instead of the LLM's summary when the summary fails a check (the steps are still shown).
 fallback_summary: "Suggested steps, each copied from the cited source. Review before acting."
