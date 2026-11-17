@@ -4,8 +4,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import tickets as api
+from app.auth.deps import current_user
 from app.main import create_app
 from app.tickets import pipeline
+from app.tickets.models import User
 from app.tickets.similar import build_ticket_index
 
 EMAIL = "anna.k@example.com"
@@ -32,7 +34,11 @@ def client(monkeypatch, tmp_path):
     index = build_ticket_index(ROWS)  # BM25 only (conftest), masked
     monkeypatch.setattr(api, "get_ticket_index", lambda: index)
     monkeypatch.setattr(pipeline, "search_similar", lambda *a, **k: [])  # no index, no model in analyze
-    return TestClient(create_app(audit_db_path=tmp_path / "audit.db", warmups=[]))
+    app = create_app(audit_db_path=tmp_path / "audit.db", warmups=[])
+    # These tests are about the routes, not login (tests/test_auth.py covers that): sign in as a test lead,
+    # who may use every route.
+    app.dependency_overrides[current_user] = lambda: User(username="demo", role="lead")
+    return TestClient(app)
 
 
 def test_analyze_returns_the_envelope_with_an_outcome(client):
