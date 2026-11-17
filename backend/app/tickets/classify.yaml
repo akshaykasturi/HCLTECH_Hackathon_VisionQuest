@@ -1,0 +1,14 @@
+# Priority rule (app/tickets/classify.py). Priority is a rule, not a model: on val no model beat always saying P3
+# (docs/EVALUATION.md, docs/ml/all-classifiers-val.md). Priority follows impact x urgency, which the text doesn't carry.
+
+priority:
+  default: P3                 # no impact given: the most common priority in train
+  impact:                     # TicketIn.impact, the reporter's own words
+    many_people: P1
+    cannot_work: P2
+    slows_me_down: P3
+    minor: P4
+  outage_bump:                # a production outage is at least this, whatever the impact says
+    to: P2
+    environments: [production, prod]
+    words: [outage, down, "all users", everyone, "nobody can", "entire"]

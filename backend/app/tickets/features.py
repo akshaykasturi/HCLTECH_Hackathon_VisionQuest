@@ -5,8 +5,16 @@ of input in production than it learned from, and its accuracy would quietly drop
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import re
-from typing import Any, Mapping, Optional
+from pathlib import Path
+from typing import Any, Mapping, Optional, Sequence
+
+import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin
+
+from app.common.paths import DATA_DIR
 
 # Change this string whenever ticket_text() changes: saved embeddings record it, so training can tell that
 # features built with an older recipe are stale.
@@ -44,3 +52,65 @@ def row_text(row: Mapping[str, Any]) -> str:
 
 
 assert not LEAKY_COLUMNS & set(TEXT_COLUMNS), "a text column is listed as leaky"
+
+
+EMBEDDINGS_NPZ = DATA_DIR / "processed" / "ticket_embeddings.npz"
+TICKETS_CSV = DATA_DIR / "tickets" / "tickets.csv"
+
+
+class StaleEmbeddingsError(RuntimeError):
+    """Saved embeddings are missing, or were built from another tickets.csv or text recipe."""
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def load_embedding_cache(splits: Sequence[str] = ("train", "val"), csv_path: Path = TICKETS_CSV,
+                         npz_path: Path = EMBEDDINGS_NPZ) -> dict[str, np.ndarray]:
+    """{ticket_id: vector} for the requested splits only (test is left out unless asked for). Raises
+    StaleEmbeddingsError (message ends with what to do) if the file is missing or doesn't match tickets.csv."""
+    meta_path = Path(npz_path).with_name(Path(npz_path).stem + ".meta.json")
+    if not Path(npz_path).exists() or not meta_path.exists():
+        raise StaleEmbeddingsError("embeddings not found: rerun scripts/embed_tickets.py")
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if meta.get("tickets_csv_sha256") != _sha256(csv_path):
+        raise StaleEmbeddingsError("embeddings were built from a different tickets.csv: rerun scripts/embed_tickets.py")
+    if meta.get("text_recipe") != TEXT_RECIPE:
+        raise StaleEmbeddingsError("embeddings use an older text recipe: rerun scripts/embed_tickets.py")
+    data = np.load(npz_path)
+    wanted = set(splits)
+    return {str(t): np.asarray(v, dtype=np.float64)
+            for t, s, v in zip(data["ticket_id"], data["split"], data["vectors"]) if str(s) in wanted}
+
+
+class EmbedRows(BaseEstimator, TransformerMixin):
+    """Pipeline step: rows (dicts with the data's own field names) -> embedding vectors of row_text(row).
+
+    The embedding-based twin of clf_pipeline.make_pipeline's text step, so embedding and TF-IDF models take the
+    same input and are scored by the same code. `cache` maps ticket_id -> vector (from
+    data/processed/ticket_embeddings.npz) so training does not re-embed; rows not in it (a live ticket) are
+    embedded with app.common.embed.embed_texts, in memory only. Set cache=None before saving the model."""
+
+    def __init__(self, cache: Optional[Mapping[str, Any]] = None):
+        self.cache = cache
+
+    def fit(self, rows: Sequence[Mapping[str, Any]], y: Any = None) -> "EmbedRows":
+        return self
+
+    def transform(self, rows: Sequence[Mapping[str, Any]]) -> np.ndarray:
+        rows = list(rows)
+        cache = self.cache or {}
+        out: list[Optional[np.ndarray]] = [cache.get(str(r.get("ticket_id"))) if r.get("ticket_id") else None
+                                           for r in rows]
+        missing = [i for i, v in enumerate(out) if v is None]
+        if missing:
+            from app.common.embed import embed_texts  # loads the model only when a row is not cached
+            fresh = embed_texts([row_text(rows[i]) for i in missing])
+            for i, v in zip(missing, fresh):
+                out[i] = v
+        return np.asarray(np.vstack(out) if out else np.zeros((0, 0)), dtype=np.float64)

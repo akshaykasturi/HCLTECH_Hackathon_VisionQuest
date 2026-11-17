@@ -1,0 +1,948 @@
+{
+  "created_at": "2026-11-17T09:48:38+00:00",
+  "split": "val",
+  "test_used": false,
+  "rows": {
+    "train": 770,
+    "val": 176
+  },
+  "tickets_csv_sha256": "315c23aff9b7a5befcf0a2fb5df560a912cc2d0ee39505ec62d6945e79c0acfd",
+  "text_recipe": "v1: subject + '. ' + description, whitespace collapsed",
+  "selection": "val macro-F1; unless the lead is not significant (McNemar p >= 0.05) and another candidate's ECE is >= 0.05 lower (then the best-F1 such candidate); within 0.01 -> lower ECE",
+  "labels": {
+    "category": {
+      "winner": "svm_C1",
+      "winner_kind": "tfidf",
+      "runner_up": "rf",
+      "reason": "calibration rule: rf's lead not significant (McNemar p 0.263) and ECE 0.191 vs 0.266",
+      "highest_macro_f1": "rf",
+      "mcnemar_vs_runner_up": {
+        "b": 7,
+        "c": 13,
+        "n": 20,
+        "statistic": 7.0,
+        "p_value": 0.26317596435546875,
+        "method": "exact_binomial"
+      },
+      "fallback_tfidf": "svm_C1",
+      "fallback_reason": "calibration rule: rf's lead not significant (McNemar p 0.263) and ECE 0.191 vs 0.266",
+      "mcnemar_winner_vs_fallback": null,
+      "winner_macro_f1_ci95": [
+        0.7017,
+        0.8269
+      ],
+      "candidates": {
+        "nb": {
+          "accuracy": 0.7273,
+          "macro_f1": 0.6779,
+          "ece": 0.1162,
+          "brier": 0.1559,
+          "recall": {
+            "Business Applications": 0.5,
+            "Cloud": 0.0625,
+            "Collaboration": 0.875,
+            "Database": 0.75,
+            "Endpoint": 0.875,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.6667,
+            "Network": 1.0,
+            "Security": 0.5
+          },
+          "n": 176,
+          "fit_seconds": 0.3058,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "alpha": 0.1
+          }
+        },
+        "lr_C1": {
+          "accuracy": 0.7614,
+          "macro_f1": 0.7277,
+          "ece": 0.1878,
+          "brier": 0.1457,
+          "recall": {
+            "Business Applications": 0.75,
+            "Cloud": 0.3125,
+            "Collaboration": 0.875,
+            "Database": 0.5625,
+            "Endpoint": 0.9167,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.6667,
+            "Network": 1.0,
+            "Security": 0.5
+          },
+          "n": 176,
+          "fit_seconds": 1.1276,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 1,
+            "class_weight": "balanced"
+          }
+        },
+        "lr_C10": {
+          "accuracy": 0.767,
+          "macro_f1": 0.7347,
+          "ece": 0.1659,
+          "brier": 0.1465,
+          "recall": {
+            "Business Applications": 0.75,
+            "Cloud": 0.4375,
+            "Collaboration": 0.875,
+            "Database": 0.5,
+            "Endpoint": 0.9167,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.6667,
+            "Network": 1.0,
+            "Security": 0.5
+          },
+          "n": 176,
+          "fit_seconds": 1.0242,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 10,
+            "class_weight": "balanced"
+          }
+        },
+        "svm_C0.1": {
+          "accuracy": 0.7557,
+          "macro_f1": 0.7281,
+          "ece": 0.1715,
+          "brier": 0.1324,
+          "recall": {
+            "Business Applications": 0.75,
+            "Cloud": 0.375,
+            "Collaboration": 0.875,
+            "Database": 0.5,
+            "Endpoint": 0.875,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.6667,
+            "Network": 1.0,
+            "Security": 0.5
+          },
+          "n": 176,
+          "fit_seconds": 0.4481,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 0.1,
+            "class_weight": "balanced"
+          }
+        },
+        "svm_C1": {
+          "accuracy": 0.7955,
+          "macro_f1": 0.7728,
+          "ece": 0.191,
+          "brier": 0.1421,
+          "recall": {
+            "Business Applications": 0.875,
+            "Cloud": 0.5625,
+            "Collaboration": 0.875,
+            "Database": 0.5,
+            "Endpoint": 0.875,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.7083,
+            "Network": 1.0,
+            "Security": 0.5625
+          },
+          "n": 176,
+          "fit_seconds": 0.6697,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 1,
+            "class_weight": "balanced"
+          }
+        },
+        "rf": {
+          "accuracy": 0.8295,
+          "macro_f1": 0.8296,
+          "ece": 0.2663,
+          "brier": 0.1852,
+          "recall": {
+            "Business Applications": 0.9375,
+            "Cloud": 0.6875,
+            "Collaboration": 0.875,
+            "Database": 0.875,
+            "Endpoint": 0.8333,
+            "Identity & Access": 0.9583,
+            "Infrastructure": 0.625,
+            "Network": 0.9167,
+            "Security": 0.75
+          },
+          "n": 176,
+          "fit_seconds": 6.0014,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "n_estimators": 500,
+            "class_weight": "balanced_subsample",
+            "max_features": "sqrt"
+          }
+        },
+        "emb_lr": {
+          "accuracy": 0.7898,
+          "macro_f1": 0.767,
+          "ece": 0.173,
+          "brier": 0.1356,
+          "recall": {
+            "Business Applications": 0.9375,
+            "Cloud": 0.625,
+            "Collaboration": 1.0,
+            "Database": 0.5625,
+            "Endpoint": 0.6667,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.7917,
+            "Network": 1.0,
+            "Security": 0.375
+          },
+          "n": 176,
+          "fit_seconds": 0.1636,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "C": 1
+          }
+        },
+        "emb_svm": {
+          "accuracy": 0.7784,
+          "macro_f1": 0.7471,
+          "ece": 0.1498,
+          "brier": 0.1269,
+          "recall": {
+            "Business Applications": 0.9375,
+            "Cloud": 0.5625,
+            "Collaboration": 0.875,
+            "Database": 0.3125,
+            "Endpoint": 0.6667,
+            "Identity & Access": 1.0,
+            "Infrastructure": 1.0,
+            "Network": 1.0,
+            "Security": 0.375
+          },
+          "n": 176,
+          "fit_seconds": 1.3875,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "C": 0.1
+          }
+        },
+        "emb_rf": {
+          "accuracy": 0.7045,
+          "macro_f1": 0.6765,
+          "ece": 0.161,
+          "brier": 0.1816,
+          "recall": {
+            "Business Applications": 0.6875,
+            "Cloud": 0.4375,
+            "Collaboration": 0.875,
+            "Database": 0.3125,
+            "Endpoint": 0.625,
+            "Identity & Access": 1.0,
+            "Infrastructure": 0.5833,
+            "Network": 1.0,
+            "Security": 0.625
+          },
+          "n": 176,
+          "fit_seconds": 1.5764,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "max_depth": null,
+            "n_estimators": 200
+          }
+        }
+      },
+      "winner_top_confusions": [
+        {
+          "true": "Database",
+          "predicted": "Cloud",
+          "count": 7
+        },
+        {
+          "true": "Infrastructure",
+          "predicted": "Collaboration",
+          "count": 4
+        },
+        {
+          "true": "Security",
+          "predicted": "Collaboration",
+          "count": 4
+        },
+        {
+          "true": "Cloud",
+          "predicted": "Database",
+          "count": 3
+        },
+        {
+          "true": "Cloud",
+          "predicted": "Identity & Access",
+          "count": 3
+        }
+      ],
+      "used_by_app": "svm_C1"
+    },
+    "subcategory": {
+      "winner": "emb_lr",
+      "winner_kind": "embedding",
+      "runner_up": "rf",
+      "reason": "highest val macro-F1",
+      "highest_macro_f1": "emb_lr",
+      "mcnemar_vs_runner_up": {
+        "b": 24,
+        "c": 15,
+        "n": 39,
+        "statistic": 1.641025641025641,
+        "p_value": 0.20018480417757917,
+        "method": "chi2_continuity"
+      },
+      "fallback_tfidf": "svm_C1",
+      "fallback_reason": "calibration rule: rf's lead not significant (McNemar p 0.082) and ECE 0.242 vs 0.333",
+      "mcnemar_winner_vs_fallback": {
+        "b": 29,
+        "c": 9,
+        "n": 38,
+        "statistic": 9.5,
+        "p_value": 0.002054718976131808,
+        "method": "chi2_continuity"
+      },
+      "winner_macro_f1_ci95": [
+        0.7978,
+        0.8838
+      ],
+      "candidates": {
+        "nb": {
+          "accuracy": 0.608,
+          "macro_f1": 0.5539,
+          "ece": 0.1824,
+          "brier": 0.1744,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 0.125,
+            "Certificate": 0.75,
+            "Compute": 0.0,
+            "Connectivity": 0.875,
+            "DNS": 1.0,
+            "Disk Space": 0.625,
+            "ERP": 1.0,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.5,
+            "MFA": 1.0,
+            "Monitoring": 0.0,
+            "Performance": 0.0,
+            "Phishing": 0.75,
+            "Printer": 1.0,
+            "Provisioning": 0.5,
+            "Service Outage": 0.75,
+            "Software Installation": 1.0,
+            "Storage Access": 0.125,
+            "Teams": 0.375,
+            "VPN": 0.0,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 0.4163,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "alpha": 0.1
+          }
+        },
+        "lr_C1": {
+          "accuracy": 0.6989,
+          "macro_f1": 0.667,
+          "ece": 0.1955,
+          "brier": 0.1999,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 0.75,
+            "Certificate": 0.75,
+            "Compute": 0.625,
+            "Connectivity": 0.875,
+            "DNS": 1.0,
+            "Disk Space": 0.0,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.75,
+            "MFA": 1.0,
+            "Monitoring": 0.25,
+            "Performance": 0.0,
+            "Phishing": 0.875,
+            "Printer": 1.0,
+            "Provisioning": 0.75,
+            "Service Outage": 1.0,
+            "Software Installation": 0.75,
+            "Storage Access": 0.125,
+            "Teams": 0.75,
+            "VPN": 0.25,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 1.8393,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 1,
+            "class_weight": "balanced"
+          }
+        },
+        "lr_C10": {
+          "accuracy": 0.7216,
+          "macro_f1": 0.6867,
+          "ece": 0.2232,
+          "brier": 0.2119,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 0.75,
+            "Certificate": 0.75,
+            "Compute": 0.875,
+            "Connectivity": 0.875,
+            "DNS": 1.0,
+            "Disk Space": 0.0,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.75,
+            "MFA": 1.0,
+            "Monitoring": 0.25,
+            "Performance": 0.0,
+            "Phishing": 0.875,
+            "Printer": 1.0,
+            "Provisioning": 0.75,
+            "Service Outage": 1.0,
+            "Software Installation": 1.0,
+            "Storage Access": 0.125,
+            "Teams": 0.75,
+            "VPN": 0.25,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 1.6206,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 10,
+            "class_weight": "balanced"
+          }
+        },
+        "svm_C0.1": {
+          "accuracy": 0.7102,
+          "macro_f1": 0.6891,
+          "ece": 0.196,
+          "brier": 0.1883,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 0.875,
+            "Certificate": 0.75,
+            "Compute": 0.5,
+            "Connectivity": 0.875,
+            "DNS": 1.0,
+            "Disk Space": 0.25,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.5,
+            "MFA": 1.0,
+            "Monitoring": 0.25,
+            "Performance": 0.0,
+            "Phishing": 0.875,
+            "Printer": 1.0,
+            "Provisioning": 1.0,
+            "Service Outage": 1.0,
+            "Software Installation": 0.75,
+            "Storage Access": 0.25,
+            "Teams": 0.5,
+            "VPN": 0.375,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 0.7295,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 0.1,
+            "class_weight": "balanced"
+          }
+        },
+        "svm_C1": {
+          "accuracy": 0.75,
+          "macro_f1": 0.7329,
+          "ece": 0.2421,
+          "brier": 0.2089,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 1.0,
+            "Certificate": 0.75,
+            "Compute": 0.875,
+            "Connectivity": 0.625,
+            "DNS": 1.0,
+            "Disk Space": 0.375,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.5,
+            "MFA": 1.0,
+            "Monitoring": 0.375,
+            "Performance": 0.0,
+            "Phishing": 0.875,
+            "Printer": 1.0,
+            "Provisioning": 1.0,
+            "Service Outage": 1.0,
+            "Software Installation": 1.0,
+            "Storage Access": 0.25,
+            "Teams": 0.625,
+            "VPN": 0.375,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 0.989,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 1,
+            "class_weight": "balanced"
+          }
+        },
+        "rf": {
+          "accuracy": 0.8125,
+          "macro_f1": 0.8082,
+          "ece": 0.3328,
+          "brier": 0.2031,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 1.0,
+            "Certificate": 0.75,
+            "Compute": 1.0,
+            "Connectivity": 0.875,
+            "DNS": 0.75,
+            "Disk Space": 1.0,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.875,
+            "MFA": 1.0,
+            "Monitoring": 0.75,
+            "Performance": 0.0,
+            "Phishing": 0.875,
+            "Printer": 1.0,
+            "Provisioning": 0.75,
+            "Service Outage": 0.75,
+            "Software Installation": 0.625,
+            "Storage Access": 0.5,
+            "Teams": 0.75,
+            "VPN": 1.0,
+            "Wi-Fi": 0.75
+          },
+          "n": 176,
+          "fit_seconds": 6.4265,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "n_estimators": 500,
+            "class_weight": "balanced_subsample",
+            "max_features": "sqrt"
+          }
+        },
+        "emb_lr": {
+          "accuracy": 0.8636,
+          "macro_f1": 0.8482,
+          "ece": 0.3067,
+          "brier": 0.1994,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 1.0,
+            "Certificate": 1.0,
+            "Compute": 1.0,
+            "Connectivity": 0.875,
+            "DNS": 1.0,
+            "Disk Space": 1.0,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.0,
+            "MFA": 1.0,
+            "Monitoring": 0.375,
+            "Performance": 1.0,
+            "Phishing": 0.5,
+            "Printer": 1.0,
+            "Provisioning": 1.0,
+            "Service Outage": 0.875,
+            "Software Installation": 1.0,
+            "Storage Access": 0.5,
+            "Teams": 1.0,
+            "VPN": 1.0,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 0.4905,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "C": 0.1
+          }
+        },
+        "emb_svm": {
+          "accuracy": 0.6875,
+          "macro_f1": 0.6553,
+          "ece": 0.2649,
+          "brier": 0.1973,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 1.0,
+            "Certificate": 0.75,
+            "Compute": 1.0,
+            "Connectivity": 0.625,
+            "DNS": 1.0,
+            "Disk Space": 0.0,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.0,
+            "MFA": 1.0,
+            "Monitoring": 0.375,
+            "Performance": 0.0,
+            "Phishing": 0.25,
+            "Printer": 1.0,
+            "Provisioning": 1.0,
+            "Service Outage": 0.375,
+            "Software Installation": 0.875,
+            "Storage Access": 0.25,
+            "Teams": 0.75,
+            "VPN": 1.0,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 3.6066,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "C": 0.1
+          }
+        },
+        "emb_rf": {
+          "accuracy": 0.733,
+          "macro_f1": 0.7139,
+          "ece": 0.3014,
+          "brier": 0.237,
+          "recall": {
+            "Account Lockout": 1.0,
+            "CRM": 0.75,
+            "Certificate": 0.75,
+            "Compute": 0.75,
+            "Connectivity": 0.75,
+            "DNS": 1.0,
+            "Disk Space": 0.375,
+            "ERP": 0.875,
+            "Email Delivery": 1.0,
+            "Endpoint Alert": 0.0,
+            "MFA": 1.0,
+            "Monitoring": 0.125,
+            "Performance": 0.5,
+            "Phishing": 0.625,
+            "Printer": 1.0,
+            "Provisioning": 0.875,
+            "Service Outage": 0.625,
+            "Software Installation": 0.75,
+            "Storage Access": 0.375,
+            "Teams": 1.0,
+            "VPN": 1.0,
+            "Wi-Fi": 1.0
+          },
+          "n": 176,
+          "fit_seconds": 4.3822,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "max_depth": null,
+            "n_estimators": 500
+          }
+        }
+      },
+      "winner_top_confusions": [
+        {
+          "true": "Endpoint Alert",
+          "predicted": "Monitoring",
+          "count": 8
+        },
+        {
+          "true": "Monitoring",
+          "predicted": "DNS",
+          "count": 4
+        },
+        {
+          "true": "Phishing",
+          "predicted": "ERP",
+          "count": 3
+        },
+        {
+          "true": "Storage Access",
+          "predicted": "Account Lockout",
+          "count": 3
+        },
+        {
+          "true": "Connectivity",
+          "predicted": "CRM",
+          "count": 1
+        }
+      ],
+      "used_by_app": "emb_lr"
+    },
+    "priority": {
+      "winner": "svm_C1",
+      "winner_kind": "tfidf",
+      "runner_up": "emb_rf",
+      "reason": "tie rule: within 0.01 macro-F1, lower ECE",
+      "highest_macro_f1": "emb_rf",
+      "mcnemar_vs_runner_up": {
+        "b": 29,
+        "c": 18,
+        "n": 47,
+        "statistic": 2.127659574468085,
+        "p_value": 0.14466148777280907,
+        "method": "chi2_continuity"
+      },
+      "fallback_tfidf": "svm_C1",
+      "fallback_reason": "highest val macro-F1",
+      "mcnemar_winner_vs_fallback": null,
+      "winner_macro_f1_ci95": [
+        0.2539,
+        0.3265
+      ],
+      "candidates": {
+        "nb": {
+          "accuracy": 0.5,
+          "macro_f1": 0.2854,
+          "ece": 0.126,
+          "brier": 0.2534,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.6833,
+            "P3": 0.6184,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 0.3008,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "alpha": 0.1
+          }
+        },
+        "lr_C1": {
+          "accuracy": 0.5,
+          "macro_f1": 0.2842,
+          "ece": 0.0681,
+          "brier": 0.2559,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.6667,
+            "P3": 0.6316,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 0.9102,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 1,
+            "class_weight": "balanced"
+          }
+        },
+        "lr_C10": {
+          "accuracy": 0.5057,
+          "macro_f1": 0.2829,
+          "ece": 0.0469,
+          "brier": 0.2554,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.5833,
+            "P3": 0.7105,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 1.2862,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 10,
+            "class_weight": "balanced"
+          }
+        },
+        "svm_C0.1": {
+          "accuracy": 0.5,
+          "macro_f1": 0.2854,
+          "ece": 0.0836,
+          "brier": 0.2563,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.6833,
+            "P3": 0.6184,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 0.3505,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 0.1,
+            "class_weight": "balanced"
+          }
+        },
+        "svm_C1": {
+          "accuracy": 0.517,
+          "macro_f1": 0.2906,
+          "ece": 0.0599,
+          "brier": 0.262,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.6667,
+            "P3": 0.6711,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 0.4556,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "C": 1,
+            "class_weight": "balanced"
+          }
+        },
+        "rf": {
+          "accuracy": 0.4489,
+          "macro_f1": 0.2583,
+          "ece": 0.065,
+          "brier": 0.2575,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.6167,
+            "P3": 0.5526,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 7.637,
+          "kind": "tfidf",
+          "by": "Akhilesh",
+          "params": {
+            "n_estimators": 500,
+            "class_weight": "balanced_subsample",
+            "max_features": "sqrt"
+          }
+        },
+        "emb_lr": {
+          "accuracy": 0.4261,
+          "macro_f1": 0.2399,
+          "ece": 0.1324,
+          "brier": 0.2686,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.5333,
+            "P3": 0.5658,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 0.218,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "C": 0.1
+          }
+        },
+        "emb_svm": {
+          "accuracy": 0.4261,
+          "macro_f1": 0.238,
+          "ece": 0.1128,
+          "brier": 0.2626,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.5,
+            "P3": 0.5921,
+            "P4": 0.0
+          },
+          "n": 176,
+          "fit_seconds": 0.7887,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "C": 0.1
+          }
+        },
+        "emb_rf": {
+          "accuracy": 0.4545,
+          "macro_f1": 0.2966,
+          "ece": 0.0749,
+          "brier": 0.255,
+          "recall": {
+            "P1": 0.0,
+            "P2": 0.5167,
+            "P3": 0.6184,
+            "P4": 0.1053
+          },
+          "n": 176,
+          "fit_seconds": 3.8003,
+          "kind": "embedding",
+          "by": "Raswanth",
+          "params": {
+            "max_depth": null,
+            "n_estimators": 500
+          }
+        }
+      },
+      "winner_top_confusions": [
+        {
+          "true": "P3",
+          "predicted": "P2",
+          "count": 25
+        },
+        {
+          "true": "P2",
+          "predicted": "P3",
+          "count": 20
+        },
+        {
+          "true": "P1",
+          "predicted": "P2",
+          "count": 19
+        },
+        {
+          "true": "P4",
+          "predicted": "P3",
+          "count": 15
+        },
+        {
+          "true": "P4",
+          "predicted": "P2",
+          "count": 4
+        }
+      ],
+      "used_by_app": "rule"
+    }
+  },
+  "decoding": {
+    "winner": "joint",
+    "reason": "highest val macro-F1",
+    "mcnemar_category": {
+      "b": 17,
+      "c": 1,
+      "n": 18,
+      "statistic": 1.0,
+      "p_value": 0.00014495849609375,
+      "method": "exact_binomial"
+    },
+    "candidates": {
+      "joint": {
+        "accuracy": 0.8864,
+        "macro_f1": 0.8734,
+        "ece": 0.053,
+        "brier": 0.0623,
+        "subcategory_accuracy": 0.858,
+        "subcategory_macro_f1": 0.8452
+      },
+      "category_first": {
+        "accuracy": 0.7955,
+        "macro_f1": 0.7728,
+        "ece": 0.191,
+        "brier": 0.1421,
+        "subcategory_accuracy": 0.7784,
+        "subcategory_macro_f1": 0.7439
+      }
+    }
+  }
+}

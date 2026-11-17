@@ -1,0 +1,61 @@
+{
+  "created_at": "2026-11-17T09:48:38+00:00",
+  "tickets_csv_sha256": "315c23aff9b7a5befcf0a2fb5df560a912cc2d0ee39505ec62d6945e79c0acfd",
+  "text_recipe": "v1: subject + '. ' + description, whitespace collapsed",
+  "selection": "val macro-F1; unless the lead is not significant (McNemar p >= 0.05) and another candidate's ECE is >= 0.05 lower (then the best-F1 such candidate); within 0.01 -> lower ECE",
+  "source": "backend/scripts/compare_all_classifiers.py (val split)",
+  "decoding": "joint",
+  "labels": {
+    "category": {
+      "use": "model",
+      "primary": {
+        "kind": "tfidf",
+        "name": "svm_C1",
+        "params": {
+          "C": 1,
+          "class_weight": "balanced"
+        },
+        "val_macro_f1": 0.7728,
+        "val_ece": 0.191
+      },
+      "reason": "calibration rule: rf's lead not significant (McNemar p 0.263) and ECE 0.191 vs 0.266",
+      "fallback": {
+        "kind": "tfidf",
+        "name": "svm_C1",
+        "params": {
+          "C": 1,
+          "class_weight": "balanced"
+        },
+        "val_macro_f1": 0.7728,
+        "val_ece": 0.191
+      }
+    },
+    "subcategory": {
+      "use": "model",
+      "primary": {
+        "kind": "embedding",
+        "name": "emb_lr",
+        "params": {
+          "C": 0.1
+        },
+        "val_macro_f1": 0.8482,
+        "val_ece": 0.3067
+      },
+      "reason": "highest val macro-F1",
+      "fallback": {
+        "kind": "tfidf",
+        "name": "svm_C1",
+        "params": {
+          "C": 1,
+          "class_weight": "balanced"
+        },
+        "val_macro_f1": 0.7329,
+        "val_ece": 0.2421
+      }
+    },
+    "priority": {
+      "use": "rule",
+      "best_model_val_macro_f1": 0.2906
+    }
+  }
+}
