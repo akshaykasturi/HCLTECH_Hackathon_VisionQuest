@@ -69,3 +69,15 @@ export function formatDuration(fromIso: string | null | undefined, toIso: string
   if (hours < 24) return `${hours} h ${minutes % 60} min`;
   return `${Math.floor(hours / 24)} d ${hours % 24} h`;
 }
+
+/** Hours -> "45 min", "5.2 h" or "3.1 d" (one decimal). For durations such as MTTR. */
+export function formatHours(hours: number): string {
+  if (hours < 1) return `${Math.round(hours * 60)} min`;
+  if (hours < 48) return `${(Math.round(hours * 10) / 10).toFixed(1)} h`;
+  return `${(Math.round((hours / 24) * 10) / 10).toFixed(1)} d`;
+}
+
+/** 0.4567 -> "46%". */
+export function formatPercent(share: number): string {
+  return `${Math.round(share * 100)}%`;
+}

@@ -7,10 +7,15 @@ import { deriveHealth } from "../../lib/health";
 import { useHealth } from "../../state/AppData";
 import { HealthBadge } from "../common/status";
 
+const ROLE_LEVEL = { employee: 0, analyst: 1, lead: 2 } as const;
+
 function NavList({ onNavigate }: { onNavigate?: () => void }) {
+  const { user } = useAuth();
+  const level = user ? ROLE_LEVEL[user.role] : 0;
+  const items = NAV_ITEMS.filter((item) => level >= ROLE_LEVEL[item.minRole ?? "analyst"]);
   return (
     <ul className="space-y-1">
-      {NAV_ITEMS.map(({ to, label, Icon, end }) => (
+      {items.map(({ to, label, Icon, end }) => (
         <li key={to}>
           <NavLink to={to} end={end} onClick={onNavigate}
                    className={({ isActive }) =>

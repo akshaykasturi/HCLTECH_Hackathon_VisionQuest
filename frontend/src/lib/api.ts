@@ -1,7 +1,8 @@
 // One HTTP client for the FastAPI backend. Every response is the {ok, data, error} envelope.
 // Errors are normalised into ApiError so screens can show one consistent message and retry.
 import type {
-  AnalysisResult, ChainStatus, Classification, FeedbackEntry, Finding, HistoryEntry, Recommendation, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
+  AnalysisResult, CategoryFeedback, ChainStatus, Classification, DashboardStats, FeedbackEntry, Finding, HistoryEntry,
+  Recommendation, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
   ResultSummary, SavedResult, Taxonomy, TicketDetail, TicketFeedbackIn, TicketIn, TicketQuery, TicketSummary, User,
 } from "./types";
 import { OUTCOMES, ROLES } from "./types";
@@ -329,6 +330,127 @@ export function assertHistory(data: unknown): HistoryEntry[] {
   return data.map(toHistoryEntry);
 }
 
+// ---------- Dashboard adapter: GET /api/tickets/stats (role lead) ----------
+// PROVISIONAL CONTRACT, written down in docs/DASHBOARD-CONTRACT.md. db/repo.stats() (Raswanth) and
+// tickets/mttr.py (Akhilesh: baseline_mttr, estimate_assisted) are not merged; until they are, the route answers
+// 503 DB_NOT_READY. Backend field names stay in this block: change StatsApi and toDashboardStats() only.
+
+export interface StatsApi {
+  total_results: number;
+  /** Analyses per outcome. An outcome with no analyses may be left out (counted as 0). */
+  outcome_counts: Partial<Record<string, number>>;
+  /** Latest analyst verdict counts per category. */
+  feedback_by_category?: { category: string; useful?: number; incorrect?: number; unresolved?: number }[] | null;
+  /** Historical incidents (ticket data, no database needed). */
+  incidents?: { total: number; resolved: number; pending: number; critical: number } | null;
+  by_priority?: { priority: string; count: number }[] | null;
+  by_service?: { service: string; count: number }[] | null;
+  by_category?: { category: string; count: number }[] | null;
+  /** baseline_mttr(tickets): measured from historical timestamps. */
+  mttr_baseline?: { median_hours: number; mean_hours?: number | null; tickets: number;
+                    by_priority?: { priority: string; median_hours: number; tickets: number }[] | null;
+                    by_service?: { service: string; median_hours: number; tickets: number }[] | null;
+                    trend?: { month: string; median_hours: number; resolved: number }[] | null } | null;
+  /** estimate_assisted(results, assumptions): an estimate, never observed. */
+  mttr_assisted?: { median_hours: number; assumptions?: string[] | null } | null;
+}
+
+const isCount = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
+const isHours = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
+const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+/** [{<nameKey>: "...", count: n}] -> CountRow[]; null/undefined -> []; anything else is malformed. */
+function countRows(value: unknown, nameKey: string, what: string): { label: string; count: number }[] {
+  return optList<unknown>(value, isRecord, what).map((row) => {
+    const r = row as Record<string, unknown>;
+    if (typeof r[nameKey] !== "string" || !r[nameKey] || !isCount(r.count)) invalid(what);
+    return { label: r[nameKey] as string, count: r.count as number };
+  });
+}
+
+/** The adapter: the backend stats record -> DashboardStats. Throws INVALID_RESPONSE for malformed data. */
+export function toDashboardStats(raw: unknown): DashboardStats {
+  if (!isRecord(raw) || !isCount(raw.total_results) || !isRecord(raw.outcome_counts)) invalid("statistics");
+  const counts = raw.outcome_counts;
+  if (Object.keys(counts).some((k) => !OUTCOMES.includes(k as never) || !isCount(counts[k]))) invalid("outcome counts");
+  const outcomes = OUTCOMES.map((outcome) => ({ outcome, count: (counts[outcome] as number | undefined) ?? 0 }));
+  if (outcomes.reduce((n, o) => n + o.count, 0) > raw.total_results) invalid("outcome counts");
+
+  const categories: CategoryFeedback[] = optList<unknown>(raw.feedback_by_category, isRecord, "feedback by category")
+    .map((row) => {
+      const r = row as Record<string, unknown>;
+      if (typeof r.category !== "string" || !r.category) invalid("feedback by category");
+      const [useful, incorrect, unresolved] = (["useful", "incorrect", "unresolved"] as const).map((k) => {
+        const v = r[k] ?? 0;
+        if (!isCount(v)) invalid("feedback by category");
+        return v;
+      });
+      const rated = useful + incorrect + unresolved;
+      return { category: r.category, useful, incorrect, unresolved, rated, usefulRate: rated ? useful / rated : null };
+    });
+
+  let mttrBaseline: DashboardStats["mttrBaseline"] = null;
+  const b = raw.mttr_baseline;
+  if (b !== null && b !== undefined) {
+    if (!isRecord(b) || !isHours(b.median_hours) || !isCount(b.tickets)
+        || (b.mean_hours !== null && b.mean_hours !== undefined && !isHours(b.mean_hours))) invalid("MTTR baseline");
+    const byPriority = optList<unknown>(b.by_priority, isRecord, "MTTR by priority").map((row) => {
+      const r = row as Record<string, unknown>;
+      if (typeof r.priority !== "string" || !isHours(r.median_hours) || !isCount(r.tickets)) invalid("MTTR by priority");
+      return { priority: r.priority, medianHours: r.median_hours, tickets: r.tickets };
+    });
+    const byService = optList<unknown>(b.by_service, isRecord, "MTTR by service").map((row) => {
+      const r = row as Record<string, unknown>;
+      if (typeof r.service !== "string" || !isHours(r.median_hours) || !isCount(r.tickets)) invalid("MTTR by service");
+      return { service: r.service, medianHours: r.median_hours, tickets: r.tickets };
+    });
+    const trend = optList<unknown>(b.trend, isRecord, "MTTR trend").map((row) => {
+      const r = row as Record<string, unknown>;
+      if (typeof r.month !== "string" || !MONTH.test(r.month) || !isHours(r.median_hours) || !isCount(r.resolved)) {
+        invalid("MTTR trend");
+      }
+      return { month: r.month, medianHours: r.median_hours, resolved: r.resolved };
+    });
+    for (let i = 1; i < trend.length; i++) if (trend[i].month <= trend[i - 1].month) invalid("MTTR trend order");
+    mttrBaseline = { medianHours: b.median_hours, meanHours: isHours(b.mean_hours) ? b.mean_hours : null,
+                     tickets: b.tickets, byPriority, byService, trend };
+  }
+
+  let mttrAssisted: DashboardStats["mttrAssisted"] = null;
+  const a = raw.mttr_assisted;
+  if (a !== null && a !== undefined) {
+    if (!isRecord(a) || !isHours(a.median_hours)) invalid("assisted MTTR");
+    const assumptions = optList<string>(a.assumptions, (x) => typeof x === "string" && x.trim() !== "", "assumptions");
+    // An estimate without its assumptions cannot be shown honestly.
+    if (assumptions.length === 0) invalid("assisted MTTR assumptions");
+    mttrAssisted = { medianHours: a.median_hours, assumptions };
+  }
+
+  let incidents: DashboardStats["incidents"] = null;
+  const inc = raw.incidents;
+  if (inc !== null && inc !== undefined) {
+    if (!isRecord(inc) || ![inc.total, inc.resolved, inc.pending, inc.critical].every(isCount)) invalid("incident counts");
+    const [total, resolved, pending, critical] = [inc.total, inc.resolved, inc.pending, inc.critical] as number[];
+    if (resolved + pending > total || critical > total) invalid("incident counts");
+    incidents = { total, resolved, pending, critical };
+  }
+
+  // Derived from the two medians, so it is an ESTIMATE like the assisted figure itself.
+  const timeSaved = mttrBaseline && mttrAssisted
+    ? { hours: mttrBaseline.medianHours - mttrAssisted.medianHours,
+        percent: mttrBaseline.medianHours > 0
+          ? (mttrBaseline.medianHours - mttrAssisted.medianHours) / mttrBaseline.medianHours : null }
+    : null;
+
+  return {
+    analyses: raw.total_results, outcomes, categories, incidents,
+    byPriority: countRows(raw.by_priority, "priority", "priority distribution"),
+    byService: countRows(raw.by_service, "service", "service distribution"),
+    byCategory: countRows(raw.by_category, "category", "category distribution"),
+    mttrBaseline, mttrAssisted, timeSaved,
+  };
+}
+
 /** "?q=vpn&priority=P1" from the set values only (empty strings are left out). */
 export function ticketQueryString(query: TicketQuery): string {
   const params = new URLSearchParams();
@@ -374,6 +496,8 @@ export function makeEndpoints(client: ApiClient) {
       client.request<unknown>("/api/tickets/taxonomy", { signal }).then(assertTaxonomy),
     searchTickets: (query: TicketQuery, signal?: AbortSignal) =>
       client.request<unknown>(`/api/tickets${ticketQueryString(query)}`, { signal }).then(assertTicketList),
+    stats: (signal?: AbortSignal) =>
+      client.request<unknown>("/api/tickets/stats", { signal }).then(toDashboardStats),
     history: (limit: number, offset: number, signal?: AbortSignal) =>
       client.request<unknown>(`/api/tickets/history?limit=${limit}&offset=${offset}`, { signal }).then(assertHistory),
     ticket: (ticketId: string, signal?: AbortSignal) =>

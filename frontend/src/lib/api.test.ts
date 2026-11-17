@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   ApiError, assertAnalysis, assertHealth, assertHistory, assertLogin, assertResult, createApiClient, describeError,
-  makeEndpoints, toHistoryEntry,
+  makeEndpoints, toDashboardStats, toHistoryEntry,
 } from "./api";
-import { HISTORY_OPEN, HISTORY_RESOLVED } from "../test/fixtures";
+import { HISTORY_OPEN, HISTORY_RESOLVED, STATS } from "../test/fixtures";
+import { formatHours } from "./format";
 import { HEALTH_OK } from "../test/fixtures";
 
 function fetchReturning(status: number, body: string | object, headers: Record<string, string> = {}) {
@@ -257,4 +258,80 @@ describe("history adapter (toHistoryEntry)", () => {
     expect(() => assertHistory([HISTORY_RESOLVED, { result_id: "x" }])).toThrow(ApiError);
     expect(() => assertHistory({ items: [] })).toThrow(ApiError);
   });
+});
+
+describe("dashboard adapter (toDashboardStats)", () => {
+  it("maps the backend stats to the frontend shape", () => {
+    const d = toDashboardStats(STATS);
+    expect(d.analyses).toBe(120);
+    expect(d.outcomes).toEqual([{ outcome: "RECOMMEND", count: 72 }, { outcome: "CLARIFY", count: 30 },
+                                { outcome: "ESCALATE", count: 12 }, { outcome: "BLOCKED", count: 6 }]);
+    expect(d.categories[0]).toEqual({ category: "Network", useful: 13, incorrect: 5, unresolved: 3, rated: 21, usefulRate: 13 / 21 });
+    expect(d.mttrBaseline?.medianHours).toBe(18.5);
+    expect(d.mttrBaseline?.byPriority[0]).toEqual({ priority: "P1", medianHours: 4.2, tickets: 140 });
+    expect(d.mttrBaseline?.byService[1]).toEqual({ service: "SAP ERP", medianHours: 30.5, tickets: 40 });
+    expect(d.mttrBaseline?.trend.map((t) => t.month)).toEqual(["2026-06", "2026-07", "2026-08"]);
+    expect(d.incidents).toEqual({ total: 1100, resolved: 980, pending: 120, critical: 147 });
+    expect(d.byPriority).toContainEqual({ label: "P1", count: 147 });
+    expect(d.byService).toHaveLength(10);
+    expect(d.byCategory[0]).toEqual({ label: "Network", count: 150 });
+    expect(d.mttrAssisted?.assumptions).toHaveLength(2);
+    expect(JSON.stringify(d)).not.toMatch(/total_results|outcome_counts|median_hours|by_priority|by_service|feedback_by_category|"incidents":\{"total_/);
+  });
+
+  it("keeps an unrated category's rate missing, not 0", () => {
+    expect(toDashboardStats(STATS).categories.find((c) => c.category === "Cloud")?.usefulRate).toBeNull();
+  });
+
+  it("counts an outcome the backend leaves out as 0 and treats missing lists and MTTR as not available", () => {
+    const d = toDashboardStats({ total_results: 5, outcome_counts: { RECOMMEND: 5 } });
+    expect(d.outcomes.map((o) => o.count)).toEqual([5, 0, 0, 0]);
+    expect([d.categories, d.mttrBaseline, d.mttrAssisted, d.incidents, d.timeSaved]).toEqual([[], null, null, null, null]);
+    expect([d.byPriority, d.byService, d.byCategory]).toEqual([[], [], []]);
+  });
+
+  it.each([
+    ["a missing total", { total_results: undefined }],
+    ["a negative count", { outcome_counts: { RECOMMEND: -1 } }],
+    ["an unknown outcome", { outcome_counts: { MAYBE: 1 } }],
+    ["outcomes that add up to more than the total", { total_results: 3 }],
+    ["a category without a name", { feedback_by_category: [{ useful: 1 }] }],
+    ["a fractional rating count", { feedback_by_category: [{ category: "Network", useful: 1.5 }] }],
+    ["a negative MTTR", { mttr_baseline: { median_hours: -2, tickets: 3 } }],
+    ["an assisted estimate without assumptions", { mttr_assisted: { median_hours: 5, assumptions: [] } }],
+    ["MTTR given as text", { mttr_assisted: { median_hours: "5h", assumptions: ["x"] } }],
+    ["resolved + pending above the total", { incidents: { total: 10, resolved: 8, pending: 5, critical: 1 } }],
+    ["more critical incidents than incidents", { incidents: { total: 10, resolved: 5, pending: 5, critical: 11 } }],
+    ["a distribution row without a count", { by_service: [{ service: "VPN" }] }],
+    ["a trend month that is not YYYY-MM", { mttr_baseline: { median_hours: 1, tickets: 1, trend: [{ month: "June", median_hours: 1, resolved: 1 }] } }],
+    ["a trend out of order", { mttr_baseline: { median_hours: 1, tickets: 1,
+      trend: [{ month: "2026-07", median_hours: 1, resolved: 1 }, { month: "2026-06", median_hours: 1, resolved: 1 }] } }],
+  ])("rejects %s", (_name, patch) => {
+    expect(() => toDashboardStats({ ...STATS, ...patch })).toThrow(ApiError);
+  });
+});
+
+describe("dashboard MTTR derivations", () => {
+  it("derives the estimated time saved and improvement from the two medians", () => {
+    const d = toDashboardStats(STATS);
+    expect(d.timeSaved?.hours).toBeCloseTo(6.1);
+    expect(d.timeSaved?.percent).toBeCloseTo(6.1 / 18.5);
+  });
+
+  it("has no time saved unless both medians exist", () => {
+    expect(toDashboardStats({ ...STATS, mttr_assisted: null }).timeSaved).toBeNull();
+    expect(toDashboardStats({ ...STATS, mttr_baseline: null }).timeSaved).toBeNull();
+  });
+
+  it("keeps a slower estimate as a negative saving and avoids dividing by a zero baseline", () => {
+    expect(toDashboardStats({ ...STATS, mttr_assisted: { median_hours: 20, assumptions: ["x"] } }).timeSaved?.hours).toBeCloseTo(-1.5);
+    const zero = toDashboardStats({ ...STATS, mttr_baseline: { median_hours: 0, tickets: 1 },
+                                    mttr_assisted: { median_hours: 0, assumptions: ["x"] } });
+    expect(zero.timeSaved).toEqual({ hours: 0, percent: null });
+  });
+});
+
+describe("hour formatting", () => {
+  it.each([[0.5, "30 min"], [1, "1.0 h"], [18.5, "18.5 h"], [47.94, "47.9 h"], [48, "2.0 d"], [74, "3.1 d"]])(
+    "%s hours -> %s", (hours, text) => expect(formatHours(hours)).toBe(text));
 });

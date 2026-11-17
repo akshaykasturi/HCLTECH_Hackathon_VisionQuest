@@ -13,6 +13,7 @@ import { AnalyzePage } from "./pages/AnalyzePage";
 import { TicketsPage } from "./pages/TicketsPage";
 import { TicketDetailPage } from "./pages/TicketDetailPage";
 import { ReviewHistoryPage } from "./pages/ReviewHistoryPage";
+import { DashboardPage } from "./pages/DashboardPage";
 import { AuditPage } from "./pages/AuditPage";
 import { SystemHealthPage } from "./pages/SystemHealthPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -46,6 +47,7 @@ export function AppRoutes() {
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="tickets/:ticketId" element={<TicketDetailPage />} />
         <Route path="history" element={<ReviewHistoryPage />} />
+        <Route path="dashboard" element={<RequireAuth role="lead"><DashboardPage /></RequireAuth>} />
         <Route path="audit" element={<AuditPage />} />
         <Route path="system-health" element={<SystemHealthPage />} />
         <Route path="*" element={<NotFoundPage />} />

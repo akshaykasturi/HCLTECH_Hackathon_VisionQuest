@@ -294,3 +294,65 @@ export interface TicketFeedbackIn {
   target?: "result" | "match";
   target_id?: string;
 }
+
+// ---------- Dashboard: what the page works with ----------
+// Frontend shape only. The backend stats record (PROVISIONAL: db/repo.stats() and tickets/mttr.py are not merged)
+// and its adapter live in lib/api.ts (StatsApi, toDashboardStats).
+
+export interface OutcomeShare {
+  outcome: Outcome;
+  count: number;
+}
+
+export interface CategoryFeedback {
+  category: string;
+  useful: number;
+  incorrect: number;
+  unresolved: number;
+  rated: number;              // useful + incorrect + unresolved
+  usefulRate: number | null;  // null when nothing was rated: never shown as 0%
+}
+
+/** A count per named group (priority, service, category). */
+export interface CountRow {
+  label: string;
+  count: number;
+}
+
+/** Historical incidents (every ticket counted once). */
+export interface IncidentOverview {
+  total: number;
+  resolved: number;   // resolved or closed
+  pending: number;    // open or in progress
+  critical: number;   // priority P1
+}
+
+/** Measured from historical ticket timestamps (created -> resolved). */
+export interface MttrBaseline {
+  medianHours: number;
+  meanHours: number | null;
+  tickets: number;
+  byPriority: { priority: string; medianHours: number; tickets: number }[];
+  byService: { service: string; medianHours: number; tickets: number }[];
+  trend: { month: string; medianHours: number; resolved: number }[];   // oldest first
+}
+
+/** An ESTIMATE with stated assumptions: never shown as an observed value (docs/DATA-CARD.md). */
+export interface MttrAssisted {
+  medianHours: number;
+  assumptions: string[];
+}
+
+export interface DashboardStats {
+  analyses: number;
+  outcomes: OutcomeShare[];           // always all four outcomes, in OUTCOMES order
+  categories: CategoryFeedback[];
+  incidents: IncidentOverview | null; // null = not available yet
+  byPriority: CountRow[];             // [] = not available yet
+  byService: CountRow[];
+  byCategory: CountRow[];
+  mttrBaseline: MttrBaseline | null;  // null = not available yet
+  mttrAssisted: MttrAssisted | null;  // null = not available yet
+  /** ESTIMATED saving: baseline median minus assisted median. null unless both exist. */
+  timeSaved: { hours: number; percent: number | null } | null;
+}
