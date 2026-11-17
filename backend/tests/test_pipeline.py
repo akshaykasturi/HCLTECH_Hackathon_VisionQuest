@@ -7,6 +7,7 @@ import pytest
 
 from app.common.report_checks import Finding
 from app.tickets import pipeline
+from app.tickets.checks import check_recommendation
 from app.tickets.models import Classification, KBHit, Recommendation, SimilarTicket, Step, TicketIn, User
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "sample_evidence.json").read_text(encoding="utf-8"))
@@ -141,7 +142,7 @@ def test_template_steps_are_verbatim_from_the_best_strong_match(monkeypatch, cal
     assert [s.text for s in rec.steps] == ["Reset the VPN client profile", "Reconnect using the new certificate"]
     for step in rec.steps:
         assert step.source_id == "INC10432" and step.excerpt == step.text and step.excerpt in STEPS_TEXT
-        assert step.why == "Resolved ticket INC10432 (likely_duplicate, similarity 0.81)"
+        assert step.why == "Resolved ticket INC10432 (match: likely duplicate)"
     assert "INC10432" in rec.summary
     lookalike_only = [s for s in similar_tickets() if s.lookalike]
     assert pipeline.template_recommendation(lookalike_only) is None
@@ -151,7 +152,52 @@ def test_generate_without_checks_shows_the_template_not_the_llm(monkeypatch, cal
     install(monkeypatch, calls, classify=classify, generate=llm_generate)
     r = pipeline.analyze(ticket(), USER)
     assert r.recommendation.generator == "template"
-    assert "checks.py not ready: LLM output not shown, template used" in notes(r)
+    assert "checks not merged: template shown, not checked" in notes(r)
+
+
+# ---- Template steps go through the real checks too (found by Atheesha) --------------------------
+
+def with_steps(steps_text: str) -> list[SimilarTicket]:
+    out = similar_tickets()
+    out[0] = out[0].model_copy(update={"resolution_text": f"Fixed it. Steps: {steps_text}"})
+    return out
+
+
+def test_unsafe_template_steps_never_reach_the_analyst(monkeypatch, calls):
+    monkeypatch.setattr(pipeline, "search_similar",
+                        lambda *a, **k: with_steps("Restart the server | Wipe the disk"))
+    install(monkeypatch, calls, classify=classify, check_recommendation=check_recommendation)  # no LLM
+    r = pipeline.analyze(ticket(), USER)
+    assert (r.outcome, r.reasons) == ("ESCALATE", ["DUPLICATE_FOUND", "NO_VERIFIED_STEPS"])
+    assert r.recommendation is None
+    assert [f.code for f in r.findings].count("UNSAFE_STEP") == 2
+    assert "template: 0 of 2 steps passed" in notes(r)
+
+
+def test_only_the_unsafe_template_step_is_dropped(monkeypatch, calls):
+    monkeypatch.setattr(pipeline, "search_similar",
+                        lambda *a, **k: with_steps("Reset the VPN client profile | Restart the server"))
+    install(monkeypatch, calls, classify=classify, check_recommendation=check_recommendation)
+    r = pipeline.analyze(ticket(), USER)
+    assert r.outcome == "RECOMMEND"
+    assert [s.text for s in r.recommendation.steps] == ["Reset the VPN client profile"]
+
+
+def test_a_clean_template_passes_the_real_checks(monkeypatch, calls):
+    install(monkeypatch, calls, classify=classify, check_recommendation=check_recommendation)
+    r = pipeline.analyze(ticket(), USER)
+    assert (r.outcome, r.recommendation.generator, len(r.recommendation.steps)) == ("RECOMMEND", "template", 2)
+    assert not any(f.severity == "block" for f in r.findings)
+
+
+def test_checks_crashing_shows_nothing_unchecked(monkeypatch, calls):
+    def broken_checks(rec, similar, kb, allowed_ids):
+        raise KeyError("x")
+
+    install(monkeypatch, calls, classify=classify, check_recommendation=broken_checks)
+    r = pipeline.analyze(ticket(), USER)
+    assert r.reasons[-1] == "NO_VERIFIED_STEPS" and r.recommendation is None
+    assert "checks failed (KeyError): nothing shown" in notes(r)
 
 
 @pytest.mark.parametrize("bad_generate", [lambda *a: None, lambda *a: (_ for _ in ()).throw(TimeoutError())])
