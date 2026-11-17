@@ -40,4 +40,4 @@ routes, data, pages) was removed. Nothing here knows tomorrow's problem.
 
 | Time | Who | What |
 |---|---|---|
-| | | |
+| 12:30 | Akshay | Problem picked (UC1); docs/PLAN.md, docs/ARCHITECTURE.md, shared shapes backend/app/tickets/models.py, test fixture, empty tickets/, auth/, db/, api/ packages |
