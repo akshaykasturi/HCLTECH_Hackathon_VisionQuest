@@ -1,5 +1,5 @@
 """Ticket routes (app/api/tickets.py) through FastAPI's TestClient. Search runs on a tiny in-memory index;
-no model download, no database (db/repo.py is not merged yet, so those routes answer 503)."""
+no model download. The database is conftest's temporary SQLite file."""
 import pytest
 from fastapi.testclient import TestClient
 
@@ -117,7 +117,8 @@ def test_one_ticket_is_masked_and_unknown_is_404(client):
     assert missing.status_code == 404 and missing.json()["error"]["code"] == "TICKET_NOT_FOUND"
 
 
-def test_feedback_without_the_repository_is_503(client):
+def test_feedback_without_the_repository_is_503(client, monkeypatch):
+    monkeypatch.setattr(api, "optional", lambda module, name: None)  # as if db/repo.py were missing
     r = client.post("/api/tickets/results/abc123/feedback", json={"verdict": "useful"})
     assert r.status_code == 503
     assert r.json()["error"] == {"code": "DB_NOT_READY", "message": "Saving is not available yet"}

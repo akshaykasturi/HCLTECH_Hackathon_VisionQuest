@@ -12,6 +12,7 @@ BAD_ID (field names and reasons only, the submitted values are never echoed). No
   POST /results/{result_id}/resolve                          -> db/repo.resolve(result_id, user) -> datetime
   GET  /history                                              -> db/repo.history(user=, limit=, offset=)
   GET  /stats (role lead)                                    -> db/repo.stats()
+  GET  /audit/verify (role lead)                             -> db/repo.verify_chain(): {ok, first_broken_seq}
 
 Login: every route needs role analyst or higher (require_role("analyst")): an employee gets 403. /stats needs
 lead. Without auth.deps (not merged) every request runs as
@@ -173,6 +174,11 @@ def history(user: AnalystUser, limit: int = Query(default=50, ge=1, le=200), off
 @router.get("/stats", summary="Outcome mix, useful rate per category, MTTR (lead)")
 def stats(user: LeadUser):
     return ok(_repo_call("stats"))
+
+
+@router.get("/audit/verify", summary="Check the database audit hash chain (lead)")
+def audit_verify(user: LeadUser):
+    return ok(_repo_call("verify_chain"))
 
 
 @router.post("/results/{result_id}/feedback", status_code=201, summary="Analyst feedback on a result",

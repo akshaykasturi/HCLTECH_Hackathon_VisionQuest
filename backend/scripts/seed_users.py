@@ -1,13 +1,14 @@
-"""Put the demo users from DEMO_USERS (.env) into the database, with hashed passwords.
+"""Create the database tables and add the demo users from DEMO_USERS (.env), with hashed passwords.
 
 Run from the backend folder:
     .\\.venv\\Scripts\\python.exe scripts\\seed_users.py
 
-DEMO_USERS format: name:password:role separated by commas, role = employee, analyst or lead.
-Safe to run again: existing users get the new password hash and role (repo.upsert_user).
+The same code runs at every server start (app/db/tables.init_db, first warm-up), so this script is only needed
+to seed a database without starting the server. DEMO_USERS format: name:password:role separated by commas,
+role = employee, analyst or lead.
 
-Until db/repo.py provides upsert_user, this only checks DEMO_USERS and says so: login then reads
-DEMO_USERS directly (app/auth/users.py), so the demo still works.
+Safe to run again: only usernames that are not in the users table yet are added. An existing user is never
+overwritten (to change a password, delete that user's row first).
 Prints usernames and roles only, never a password or a hash.
 """
 from __future__ import annotations
@@ -18,10 +19,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.auth.security import hash_password  # noqa: E402
 from app.auth.users import DemoUsersError, parse_demo_users  # noqa: E402
 from app.common.env import load_dotenv  # noqa: E402
-from app.common.trace import optional  # noqa: E402
+from app.db.tables import init_db  # noqa: E402
 
 
 def main() -> int:
@@ -34,19 +34,10 @@ def main() -> int:
     if not users:
         print("DEMO_USERS is empty in backend/.env: add e.g. emp1:<password>:employee,analyst1:<password>:analyst,lead1:<password>:lead")
         return 1
-
-    upsert = optional("app.db.repo", "upsert_user")
-    if upsert is None:
-        print(f"DEMO_USERS is valid ({len(users)} users). db/repo.py has no upsert_user yet, so nothing was "
-              "written: login reads DEMO_USERS directly until then.")
-        for username, _, role in users:
-            print(f"  {username} ({role})")
-        return 0
-
-    for username, password, role in users:
-        upsert(username, hash_password(password), role)
-        print(f"  saved {username} ({role})")
-    print(f"Done: {len(users)} users in the database.")
+    added = set(init_db())
+    for username, _, role in users:
+        print(f"  {username} ({role}): {'added' if username in added else 'already there, not changed'}")
+    print(f"Done: {len(added)} added, {len(users) - len(added)} already in the database.")
     return 0
 
 

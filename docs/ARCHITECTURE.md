@@ -47,10 +47,13 @@ Outcomes: **RECOMMEND** (cited steps), **CLARIFY** (one question), **ESCALATE** 
 | Table | Columns | Notes |
 |---|---|---|
 | `users` | id, username, password_hash, role, created_at | PBKDF2 hash; roles analyst, lead |
-| `analysis_results` | result_id, created_at, recommended_at, user_id, ticket_masked (JSON), classification (JSON), evidence_ids (JSON), outcome, reasons (JSON), confidence, recommendation (JSON), findings (JSON), generator, model_version, prompt_version | Masked data only |
+| `analysis_results` | result_id, created_at, recommended_at, user_id, source (analyst/employee), ticket_masked (JSON), classification (JSON), evidence_ids (JSON), outcome, reasons (JSON), confidence, recommendation (JSON), findings (JSON), generator, model_version, prompt_version | Masked data only |
 | `feedback` | id, result_id, reviewer_id, target (result/match), target_id, verdict (useful/incorrect/unresolved), note_masked, created_at | Append-only: a changed mind is a new row; latest counts |
 | `resolutions` | result_id, resolved_by, resolved_at | MTTR end time |
-| `audit_events` | seq, event_type, result_id, payload_hash, prev_hash, hash, created_at | Hash chain over the rows above; reuse `canonical_json` / `compute_hash` from `common/audit.py` |
+| `audit_events` | seq, event_type, result_id, payload (JSON), payload_hash, prev_hash, hash, created_at | Hash chain over every write above; reuses `canonical_json` / `compute_hash` from `common/audit.py`. Each payload holds the written row's SHA-256, so `GET /api/tickets/audit/verify` (lead) also catches an edited row |
+
+user_id, reviewer_id and resolved_by hold the username from the login token. Tables are created and
+`DEMO_USERS` seeded (missing usernames only, never overwritten) by `db/tables.init_db()`, the first warm-up.
 
 Feedback is read back by `/history` and as `SimilarTicket.past_feedback`. It is **never** written into the search
 index: a click is an opinion, not a verified fix.
