@@ -26,6 +26,7 @@ with the goal of measurably reducing MTTR. It analyses and recommends only: no a
 | Mentor: login | `backend/app/auth/`, Login page | todo |
 | Mentor: feedback in a permanent DB | Neon Postgres via `DATABASE_URL` (`backend/app/db/`) | todo |
 | Mentor: screen + classify before masking | `backend/app/tickets/screen.py` + `classify.py` run first, raw text in memory only | todo |
+| Mentor: compare 3 chunking methods (fixed, heading, contextual) x 3 retrieval methods (BM25, dense, hybrid) | `backend/app/tickets/chunking.py` + `retrieval_eval()`, results table in `docs/EVALUATION.md` | todo |
 | Sensitive content respected in retrieval, display and export | `backend/app/tickets/guard.py` masks before search, storage, logs, LLM | todo |
 | Evaluation report | `backend/scripts/evaluate.py` -> `docs/EVALUATION.md` | todo |
 | At least 3 worked examples | `docs/WORKED-EXAMPLES.md` | todo |
@@ -81,7 +82,7 @@ and red-team cases: `backend/data/tickets/labelled_cases.jsonl`. KB articles: `b
 "Leads" means the main person who builds it first and who to ask, not the only person. One owner per new file.
 
 - **Akshay**: integration + merges; `tickets/models.py`, `tickets/similar.py`, `tickets/kb.py`, `tickets/gate.py`,
-  `tickets/pipeline.py`, `tickets/policy.yaml`, `app/main.py`, `scripts/build_index.py`; Render + Neon deploy.
+  `tickets/pipeline.py`, `tickets/chunking.py`, `tickets/policy.yaml`, `app/main.py`, `scripts/build_index.py`; Render + Neon deploy.
 - **Atheesha**: `tickets/screen.py`, `tickets/guard.py` (+ `common/redact.py` additions), `tickets/prompts.py`,
   `tickets/generate.py`, `tickets/checks.py`, `auth/` (`security.py`, `deps.py`, `router.py`),
   `scripts/redteam.py`, `scripts/seed_users.py`, `data/tickets/redteam.jsonl`.
@@ -89,7 +90,8 @@ and red-team cases: `backend/data/tickets/labelled_cases.jsonl`. KB articles: `b
   `scripts/train_classifier.py`, gate thresholds in `policy.yaml` (tuned on validation).
 - **Akhilesh**: `scripts/generate_data.py` (start from `generate_tickets.py` in commit 514e4e5), `data/tickets/`,
   `data/docs/kb/`, `docs/DATA-CARD.md`, `tickets/mttr.py`, `scripts/evaluate.py`, `docs/EVALUATION.md`,
-  `docs/WORKED-EXAMPLES.md`, Miro board, pitch.
+  `docs/WORKED-EXAMPLES.md`, Miro board, pitch. KB: 15-25 articles, 400-800 words, 4-6 `##` sections;
+  each eval ticket has gold kb `doc_id` + `key_sentence`.
 - **Roshan**: `api/tickets.py` (thin routes), frontend pages `LoginPage`, `AnalyzePage`, `TicketsPage`,
   `ReviewHistoryPage`, `DashboardPage` + token handling in `frontend/src/lib/api.ts`; Vercel deploy.
 
@@ -106,3 +108,7 @@ and red-team cases: `backend/data/tickets/labelled_cases.jsonl`. KB articles: `b
 - Login with JWT; roles analyst and lead; passwords hashed (PBKDF2); demo users seeded from env.
 - MTTR: baseline measured from historical timestamps; assisted MTTR is an estimate with stated assumptions.
 - Deploy: Vercel (frontend) -> Render (backend) -> Neon (database).
+- Chunking: 3 trials on KB articles, winner chosen on validation and set as `kb_chunking` in `policy.yaml`.
+  Tickets are not chunked (one ticket = one unit). Contextual prefixes are for search only; citations use the
+  original text. Prefixes are generated once and committed in `backend/data/kb_context.json`.
+- Retrieval: hybrid BM25 + dense + RRF, compared against each alone.
