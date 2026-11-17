@@ -157,3 +157,93 @@ def test_analyst_feedback_is_neutral_without_votes(index):
     r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy=ON, index=index)
     values = {tid: e["criteria"]["analyst_feedback"] for tid, e in r.explanations.items()}
     assert values == pytest.approx({"T2": 0.5, "T3": 0.8})   # (0+1)/(0+2) and (3+1)/(3+2)
+
+
+# ---- AHP priors ------------------------------------------------------------------------------------------
+
+from app.common.mcdm import blend_weights  # noqa: E402
+
+
+def test_judgements_file_is_consistent_and_matches_the_criteria():
+    a = R.ahp_prior()
+    assert a.cr < 0.10 and a.accepted
+    assert list(a.weights) == [c["name"] for c in R.DEFAULTS["criteria"]]   # same order as the code
+    assert sum(a.weights.values()) == pytest.approx(1.0)
+    assert "decided before seeing results" in a.author
+
+
+def _comparable(r):
+    return ([s.ticket_id for s in r.similar], r.weights, r.explanations, r.detail, r.dropped, r.applied)
+
+
+def test_typed_prior_source_gives_exactly_the_old_results(pool, index):
+    default = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy=ON, index=index)
+    typed = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy={**ON, "prior_source": "typed"}, index=index)
+    assert _comparable(typed) == _comparable(default)
+    assert typed.prior_source == "typed" and typed.ahp is None and "AHP" not in typed.detail
+    assert all(set(w) == {"entropy", "prior", "blended"} for w in typed.weights.values())   # no new keys
+
+
+def test_ahp_prior_source_uses_the_ahp_weights(pool, index):
+    r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy={**ON, "prior_source": "ahp"}, index=index)
+    a = R.ahp_prior()
+    kept = list(r.weights)
+    total = sum(a.weights[n] for n in kept)
+    assert r.prior_source == "ahp" and "prior AHP (CR" in r.detail
+    for n in kept:   # the prior shown is the AHP weight, renormalised over the criteria that had data
+        assert r.weights[n]["prior"] == pytest.approx(a.weights[n] / total, abs=1e-4)
+        assert r.weights[n]["ahp"] == r.weights[n]["prior"]
+    assert r.ahp["cr"] < 0.10 and set(r.ahp["weights"]) == set(a.weights)
+
+
+@pytest.mark.parametrize("method", ["ahp", "ahp_entropy"])
+def test_ahp_methods_run_and_report_ahp(pool, index, method):
+    r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy=ON, method=method, index=index)
+    assert r.applied and r.method == method and r.prior_source == "ahp"
+    assert sum(w["blended"] for w in r.weights.values()) == pytest.approx(1.0, abs=1e-3)
+
+
+def test_ahp_method_is_ahp_weights_only(pool, index):
+    r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy=ON, method="ahp", index=index)
+    ahp = [r.weights[n]["ahp"] for n in r.weights]
+    expected = blend_weights(None, ahp, 0.0, ON.get("weight_floor", 0.05))
+    assert [r.weights[n]["blended"] for n in r.weights] == pytest.approx(list(expected), abs=1e-3)
+
+
+INCONSISTENT = """
+author: test
+criteria: [bm25, resolution_quality, analyst_feedback]
+judgements:
+  - {row: bm25, col: resolution_quality, value: 9}
+  - {row: bm25, col: analyst_feedback, value: 1/9}
+  - {row: resolution_quality, col: analyst_feedback, value: 9}
+"""
+THREE = [{"name": "bm25", "direction": "benefit", "prior_weight": 0.5},
+         {"name": "resolution_quality", "direction": "benefit", "prior_weight": 0.3},
+         {"name": "analyst_feedback", "direction": "benefit", "prior_weight": 0.2}]
+
+
+def test_inconsistent_judgements_fall_back_to_typed_priors(pool, index, tmp_path, caplog):
+    path = tmp_path / "bad.yaml"
+    path.write_text(INCONSISTENT, encoding="utf-8")
+    policy = {**ON, "criteria": THREE, "ahp_file": str(path)}
+    r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy=policy, method="ahp", index=index)
+    typed = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy=policy, method="prior", index=index)
+    assert r.applied and r.prior_source == "typed"
+    assert r.ahp["accepted"] is False and r.ahp["cr"] > 0.10
+    assert "AHP rejected" in r.detail and "typed prior_weight used instead" in r.detail
+    assert [r.weights[n]["blended"] for n in r.weights] == [typed.weights[n]["blended"] for n in typed.weights]
+    assert "inconsistent" in caplog.text
+
+
+def test_broken_judgements_file_keeps_retrieval_order(pool, index, tmp_path):
+    path = tmp_path / "dup.yaml"
+    path.write_text(INCONSISTENT + "  - {row: bm25, col: resolution_quality, value: 2}\n", encoding="utf-8")
+    r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy={**ON, "criteria": THREE, "ahp_file": str(path)},
+                    method="ahp", index=index)
+    assert not r.applied and r.findings[0].code == "MCDM_SKIPPED"
+
+
+def test_unknown_prior_source_is_an_error_not_a_crash(pool, index):
+    r = R.mcdm_rank(pool, QUERY, TICKET, CLASSIFICATION, policy={**ON, "prior_source": "vibes"}, index=index)
+    assert not r.applied and r.findings[0].code == "MCDM_SKIPPED"

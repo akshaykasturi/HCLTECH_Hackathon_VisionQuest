@@ -4,7 +4,7 @@ import math
 import numpy as np
 import pytest
 
-from app.common.mcdm import blend_weights, entropy_weights, order, topsis
+from app.common.mcdm import ahp_matrix_from_upper, ahp_weights, blend_weights, entropy_weights, order, topsis
 
 # ---- TOPSIS: a 3 x 3 example by hand ----------------------------------------------------------------
 # Criteria: c1 benefit, c2 benefit, c3 cost. Weights [0.5, 0.3, 0.2].
@@ -131,3 +131,52 @@ def test_blend_rejects_impossible_settings():
         blend_weights(None, [0.5, 0.5], lam=0.5, floor=0.5)   # 2 x 0.5 = 1: no room left
     with pytest.raises(ValueError):
         blend_weights([0.5, 0.5], [0.5, 0.5], lam=1.5, floor=0.0)
+
+
+# ---- AHP ------------------------------------------------------------------------------------------------
+
+def test_ahp_reproduces_the_classic_textbook_example():
+    # The widely used 3-criterion example: A is 3x as important as B and 5x as important as C; B is 3x C.
+    # Published answer: weights 0.637 / 0.258 / 0.105, lambda_max 3.039, CI 0.019, CR = 0.019 / 0.58 = 0.033.
+    w, cr = ahp_weights([[1, 3, 5], [1 / 3, 1, 3], [1 / 5, 1 / 3, 1]])
+    assert w == pytest.approx([0.637, 0.258, 0.105], abs=1e-3)
+    assert cr == pytest.approx(0.033, abs=1e-3)
+
+
+def test_ahp_perfectly_consistent_matrix_returns_its_weights_with_cr_zero():
+    # a[i][j] = w_i / w_j is perfectly consistent: lambda_max = n, CI = 0, and the eigenvector is w itself.
+    target = np.array([0.5, 0.25, 0.15, 0.1])
+    w, cr = ahp_weights(target[:, None] / target[None, :])
+    assert w == pytest.approx(target, abs=1e-9)
+    assert cr == pytest.approx(0.0, abs=1e-9)
+
+
+def test_ahp_inconsistent_matrix_has_cr_above_the_limit():
+    # A >> B, B >> C, but C >> A: a circular preference, as inconsistent as it gets.
+    _, cr = ahp_weights([[1, 9, 1 / 9], [1 / 9, 1, 9], [9, 1 / 9, 1]])
+    assert cr > 0.10
+
+
+@pytest.mark.parametrize("matrix, message", [
+    ([[1, 3], [3, 1]], "not reciprocal"),                  # a[1][0] should be 1/3
+    ([[2, 3], [1 / 3, 1]], "diagonal"),
+    ([[1, 0], [1, 1]], "> 0"),
+    ([[1, 2, 3], [0.5, 1, 2]], "square"),
+])
+def test_ahp_rejects_invalid_matrices(matrix, message):
+    with pytest.raises(ValueError, match=message):
+        ahp_weights(matrix)
+
+
+def test_matrix_from_upper_fills_reciprocals():
+    A = ahp_matrix_from_upper(["a", "b", "c"], {("a", "b"): 3, ("a", "c"): 5, ("b", "c"): 3})
+    assert np.allclose(A, [[1, 3, 5], [1 / 3, 1, 3], [1 / 5, 1 / 3, 1]])
+
+
+def test_matrix_from_upper_rejects_missing_reversed_and_unknown_pairs():
+    with pytest.raises(ValueError, match="missing"):
+        ahp_matrix_from_upper(["a", "b", "c"], {("a", "b"): 3, ("a", "c"): 5})
+    with pytest.raises(ValueError, match="upper triangle"):
+        ahp_matrix_from_upper(["a", "b"], {("b", "a"): 3})
+    with pytest.raises(ValueError, match="unknown"):
+        ahp_matrix_from_upper(["a", "b"], {("a", "z"): 3})

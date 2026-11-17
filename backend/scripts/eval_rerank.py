@@ -1,7 +1,9 @@
 """Does TOPSIS re-ranking find the right past tickets better than plain retrieval? Four arms, same pool:
 
-  retrieval   hybrid/RRF order (baseline)          prior     TOPSIS, prior weights from policy.yaml
-  entropy     TOPSIS, entropy weights only         blended   TOPSIS, lam * entropy + (1 - lam) * prior
+  retrieval   hybrid/RRF order (baseline)          prior     TOPSIS, typed prior weights
+  entropy     TOPSIS, entropy weights only         blended   TOPSIS, lam * entropy + (1 - lam) * typed prior
+  ahp         TOPSIS, AHP weights only             ahp_entropy  TOPSIS, lam * entropy + (1 - lam) * AHP
+  (AHP weights come from app/tickets/ahp_judgements.yaml; if their CR >= 0.10 the typed priors are used.)
 
 Each query = one val (or test) ticket with gold_similar_ticket_ids (data/tickets/labelled_cases.jsonl).
 Gold tickets are in the query's own split, so the index is train + that split, with the query itself removed.
@@ -30,7 +32,7 @@ from typing import Any, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-ARMS = ("retrieval", "prior", "entropy", "blended")
+ARMS = ("retrieval", "prior", "entropy", "blended", "ahp", "ahp_entropy")
 logger = logging.getLogger("eval_rerank")
 
 
@@ -88,6 +90,7 @@ def rerank_eval(split: str = "val", pool_k: int = 20, top_n: int = 5, policy: Op
     per_arm: dict[str, dict[str, list[float]]] = {a: {"recall": [], "mrr": [], "ndcg": [], "wrong_cat_top3": [],
                                                        "top1_changed": []} for a in ARMS}
     weight_sums: dict[str, list[float]] = {}
+    ahp_summary: Optional[dict[str, Any]] = None
     skipped = 0
     for case in cases:
         qid = str(case["ticket_id"])
@@ -131,11 +134,13 @@ def rerank_eval(split: str = "val", pool_k: int = 20, top_n: int = 5, policy: Op
         for arm in ARMS[1:]:
             r = mcdm_rank(pool, query, ticket, classification, policy=run_policy, method=arm, index=index)
             tops[arm] = [h.ticket_id for h in r.similar]
-            if arm == "blended":
+            if arm in ("blended", "ahp_entropy"):
                 for name, w in r.weights.items():
-                    for kind in ("entropy", "blended"):
+                    for kind in ("entropy", "prior", "blended"):
                         if w[kind] is not None:
-                            weight_sums.setdefault(f"{name}|{kind}", []).append(w[kind])
+                            weight_sums.setdefault(f"{name}|{arm}|{kind}", []).append(w[kind])
+            if arm == "ahp" and r.ahp is not None:
+                ahp_summary = {"cr": r.ahp["cr"], "accepted": r.ahp["accepted"], "weights": r.ahp["weights"]}
         for arm, ids in tops.items():
             m = per_arm[arm]
             m["recall"].append(len(gold & set(ids)) / len(gold) if gold else 0.0)
@@ -149,7 +154,7 @@ def rerank_eval(split: str = "val", pool_k: int = 20, top_n: int = 5, policy: Op
     weights = {key: sum(v) / len(v) for key, v in weight_sums.items()}
     return {"split": split, "n": len(per_arm["retrieval"]["recall"]), "skipped": skipped, "mode": index.mode,
             "classifier": classify is not None, "time_aware": time_aware, "pool_k": pool_k, "top_n": top_n, "arms": per_arm,
-            "mean_weights": weights}
+            "mean_weights": weights, "ahp": ahp_summary}
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -198,14 +203,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         wrong = sum(m["wrong_cat_top3"]) / len(m["wrong_cat_top3"])
         print(f"| {arm} | {' | '.join(cell)} | {changed:.1%} | {wrong:.1%} |")
 
-    print("\nMean weights per criterion (blended arm):\n")
-    print("| criterion | entropy | blended |")
-    print("|---|---|---|")
-    names = sorted({key.split("|")[0] for key in res["mean_weights"]})
-    for name in names:
-        e = res["mean_weights"].get(f"{name}|entropy")
-        b = res["mean_weights"].get(f"{name}|blended")
-        print(f"| {name} | {'-' if e is None else f'{e:.3f}'} | {'-' if b is None else f'{b:.3f}'} |")
+    a = res.get("ahp")
+    if a:
+        print(f"\nAHP judgements: CR {a['cr']:.3f} ({'accepted' if a['accepted'] else 'REJECTED: typed priors used'})")
+    print("\nMean weights per criterion (criteria with data in this run; renormalised):\n")
+    print("| criterion | entropy | typed prior | blended | AHP prior | ahp_entropy |")
+    print("|---|---|---|---|---|---|")
+    mw = res["mean_weights"]
+    f = lambda v: "-" if v is None else f"{v:.3f}"  # noqa: E731
+    for name in sorted({key.split("|")[0] for key in mw}):
+        print(f"| {name} | {f(mw.get(f'{name}|blended|entropy'))} | {f(mw.get(f'{name}|blended|prior'))} | "
+              f"{f(mw.get(f'{name}|blended|blended'))} | {f(mw.get(f'{name}|ahp_entropy|prior'))} | "
+              f"{f(mw.get(f'{name}|ahp_entropy|blended'))} |")
     if res["split"] == "val":
         print("\nTune lam / prior weights here; set mcdm.enabled only if blended beats retrieval. Test once at the end.")
     return 0
