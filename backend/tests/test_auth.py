@@ -18,7 +18,7 @@ from app.main import create_app
 from app.tickets.models import User
 
 SECRET = "test-secret-" + "x" * 40
-DEMO = "ana:pw-ana-1:analyst, lee:p:w:2:lead"   # lee's password contains ':' on purpose
+DEMO = "ana:pw-ana-1:analyst, lee:p:w:2:lead, emma:pw-emma-3:employee"   # lee's password has ':' on purpose
 
 
 @pytest.fixture(autouse=True)
@@ -118,7 +118,8 @@ def test_missing_or_short_secret_stops_login(monkeypatch, secret):
 # ---- user store -------------------------------------------------------------------------------
 
 def test_parse_demo_users_allows_colons_in_passwords():
-    assert parse_demo_users(DEMO) == [("ana", "pw-ana-1", "analyst"), ("lee", "p:w:2", "lead")]
+    assert parse_demo_users(DEMO) == [("ana", "pw-ana-1", "analyst"), ("lee", "p:w:2", "lead"),
+                                      ("emma", "pw-emma-3", "employee")]
 
 
 @pytest.mark.parametrize("value,part", [("ana:pw", "entry 1"), ("ana:pw:boss", "role"), (":pw:analyst", "empty")])
@@ -214,3 +215,66 @@ def test_ticket_routes_need_login(client):
     assert client.get("/api/tickets/taxonomy").status_code == 401
     token = login(client).json()["data"]["token"]
     assert client.get("/api/tickets/stats", headers=bearer(token)).status_code == 403   # analyst, not lead
+
+
+# ---- employee role --------------------------------------------------------------------------------
+
+ANALYST_ROUTES = [("post", "/api/tickets/analyze", {"subject": "VPN down", "description": "Error 809 from home."}),
+                  ("get", "/api/tickets/presets", None), ("get", "/api/tickets", None),
+                  ("get", "/api/tickets/taxonomy", None), ("get", "/api/tickets/history", None),
+                  ("get", "/api/tickets/stats", None),
+                  ("post", "/api/tickets/results/abc123/feedback", {"verdict": "useful"}),
+                  ("post", "/api/tickets/results/abc123/resolve", None), ("get", "/api/tickets/INC-100005", None),
+                  ("get", "/api/audit/verify", None), ("get", "/api/audit/results", None),
+                  ("get", "/api/audit/results/r-1", None), ("get", "/api/audit/results/r-1/feedback", None),
+                  ("post", "/api/audit/results/r-1/feedback", {"verdict": "confirm"})]
+
+
+def call(client, method, path, body, headers):
+    return getattr(client, method)(path, headers=headers, **({"json": body} if body is not None else {}))
+
+
+def test_employee_can_sign_in_and_read_their_own_identity(client):
+    r = login(client, "emma", "pw-emma-3")
+    assert r.status_code == 200 and r.json()["data"]["user"] == {"username": "emma", "role": "employee"}
+    me = client.get("/api/auth/me", headers=bearer(r.json()["data"]["token"]))
+    assert me.json()["data"] == {"username": "emma", "role": "employee"}
+
+
+@pytest.mark.parametrize("method,path,body", ANALYST_ROUTES)
+def test_employee_gets_403_on_every_analyst_route(client, method, path, body):
+    token = login(client, "emma", "pw-emma-3").json()["data"]["token"]
+    r = call(client, method, path, body, bearer(token))
+    assert r.status_code == 403 and r.json()["error"]["code"] == "FORBIDDEN", (path, r.status_code)
+
+
+@pytest.mark.parametrize("method,path,body", ANALYST_ROUTES)
+def test_nobody_reaches_an_analyst_route_without_signing_in(client, method, path, body):
+    assert call(client, method, path, body, {}).status_code == 401
+
+
+def test_analyst_passes_the_role_check_on_analyst_routes(client):
+    token = login(client).json()["data"]["token"]
+    for method, path, body in ANALYST_ROUTES:
+        status = call(client, method, path, body, bearer(token)).status_code
+        expected_403 = path == "/api/tickets/stats"            # lead only
+        assert (status == 403) == expected_403, (path, status)
+        assert status != 401
+
+
+def test_role_hierarchy_employee_below_analyst_below_lead():
+    from app.auth.deps import ROLE_LEVEL
+    assert ROLE_LEVEL["employee"] < ROLE_LEVEL["analyst"] < ROLE_LEVEL["lead"]
+
+
+def test_employee_level_routes_let_every_signed_in_role_in(client):
+    probe = APIRouter(prefix="/probe2")
+
+    @probe.get("/employee")
+    def employee_route(user: Annotated[User, Depends(require_role("employee"))]):
+        return ok(user.model_dump())
+
+    client.app.include_router(probe)
+    for name, pw in (("emma", "pw-emma-3"), ("ana", "pw-ana-1"), ("lee", "p:w:2")):
+        token = login(client, name, pw).json()["data"]["token"]
+        assert client.get("/probe2/employee", headers=bearer(token)).status_code == 200, name

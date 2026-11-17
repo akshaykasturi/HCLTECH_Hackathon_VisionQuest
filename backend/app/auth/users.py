@@ -21,7 +21,7 @@ from app.tickets.models import Role, User
 
 logger = logging.getLogger(__name__)
 
-ROLES: tuple[str, ...] = get_args(Role)          # ("analyst", "lead")
+ROLES: tuple[str, ...] = get_args(Role)          # ("employee", "analyst", "lead")
 
 
 class DemoUsersError(ValueError):

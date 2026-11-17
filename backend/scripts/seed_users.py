@@ -3,7 +3,7 @@
 Run from the backend folder:
     .\\.venv\\Scripts\\python.exe scripts\\seed_users.py
 
-DEMO_USERS format: name:password:role separated by commas, role = analyst or lead.
+DEMO_USERS format: name:password:role separated by commas, role = employee, analyst or lead.
 Safe to run again: existing users get the new password hash and role (repo.upsert_user).
 
 Until db/repo.py provides upsert_user, this only checks DEMO_USERS and says so: login then reads
@@ -32,7 +32,7 @@ def main() -> int:
         print(f"Problem: {exc}")
         return 1
     if not users:
-        print("DEMO_USERS is empty in backend/.env: add e.g. analyst1:<password>:analyst,lead1:<password>:lead")
+        print("DEMO_USERS is empty in backend/.env: add e.g. emp1:<password>:employee,analyst1:<password>:analyst,lead1:<password>:lead")
         return 1
 
     upsert = optional("app.db.repo", "upsert_user")
