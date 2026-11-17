@@ -147,7 +147,7 @@ def test_load_splits_drops_test_rows(cmp, tmp_path):
 
 def test_stale_npz_check_fires_when_the_csv_changed(cmp, tmp_path):
     csv_path, npz = _dataset(tmp_path)
-    csv_path.write_text(csv_path.read_text(encoding="utf-8") + "", encoding="utf-8")   # unchanged: fine
+    csv_path.write_bytes(csv_path.read_bytes())   # rewritten byte for byte (text mode would change line endings on Linux)
     cmp.load_splits(csv_path, npz)
     with csv_path.open("a", encoding="utf-8") as f:
         f.write("new-1,train,Network,x,P2,added later,after embedding\n")
