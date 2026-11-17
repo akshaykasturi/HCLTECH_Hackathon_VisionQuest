@@ -1,7 +1,7 @@
 // One HTTP client for the FastAPI backend. Every response is the {ok, data, error} envelope.
 // Errors are normalised into ApiError so screens can show one consistent message and retry.
 import type {
-  AnalysisResult, CategoryFeedback, ChainStatus, Classification, DashboardStats, FeedbackEntry, Finding, HistoryEntry,
+  AnalysisResult, CategoryFeedback, ChainStatus, Classification, DbChainStatus, DashboardStats, FeedbackEntry, Finding, HistoryEntry,
   Recommendation, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
   ResultSummary, SavedResult, Taxonomy, TicketDetail, TicketFeedbackIn, TicketIn, TicketQuery, TicketSummary, User,
 } from "./types";
@@ -175,6 +175,13 @@ export function assertChain(data: unknown): ChainStatus {
   return data as unknown as ChainStatus;
 }
 
+/** GET /api/tickets/audit/verify (db/repo.verify_chain): {ok, first_broken_seq, n_events}. */
+export function assertDbChain(data: unknown): DbChainStatus {
+  if (!isRecord(data) || typeof data.ok !== "boolean" || typeof data.n_events !== "number"
+      || (data.first_broken_seq !== null && typeof data.first_broken_seq !== "number")) invalid("audit chain status");
+  return data as unknown as DbChainStatus;
+}
+
 export function assertLogin(data: unknown): LoginData {
   if (!isRecord(data) || typeof data.token !== "string" || !data.token || typeof data.expires_at !== "string"
       || !isRecord(data.user) || typeof data.user.username !== "string"
@@ -212,11 +219,10 @@ export function assertTicket(data: unknown): TicketDetail {
 }
 
 // ---------- Review history adapter: GET /api/tickets/history ----------
-// PROVISIONAL CONTRACT. db/repo.history() (Raswanth) is not merged; until it is, the route answers 503
-// DB_NOT_READY. HistoryRecordApi is our proposal, built only from the documented table columns in
-// docs/ARCHITECTURE.md ("Database": analysis_results, feedback, resolutions) with their own names.
-// Backend field names stay in this block: when the real response is known, change HistoryRecordApi and
-// toHistoryEntry() only. Pages use HistoryEntry (lib/types.ts).
+// db/repo.history() returns exactly this shape (the table columns of docs/ARCHITECTURE.md "Database" with their
+// own names, its feedback rows and its resolution; tested in backend/tests/test_db_repo.py). Backend field names
+// stay in this block: if the response changes, change HistoryRecordApi and toHistoryEntry() only. Pages use
+// HistoryEntry (lib/types.ts). Review History and the Audit History page both read it.
 
 /** One feedback row as the backend is expected to send it (table `feedback`). */
 export interface HistoryFeedbackApi {
@@ -331,9 +337,10 @@ export function assertHistory(data: unknown): HistoryEntry[] {
 }
 
 // ---------- Dashboard adapter: GET /api/tickets/stats (role lead) ----------
-// PROVISIONAL CONTRACT, written down in docs/DASHBOARD-CONTRACT.md. db/repo.stats() (Raswanth) and
-// tickets/mttr.py (Akhilesh: baseline_mttr, estimate_assisted) are not merged; until they are, the route answers
-// 503 DB_NOT_READY. Backend field names stay in this block: change StatsApi and toDashboardStats() only.
+// PROPOSED CONTRACT, written down in docs/DASHBOARD-CONTRACT.md. db/repo.stats() exists but returns other fields
+// (n_results, outcome_counts, useful_rate_by_category, mttr) and does not yet merge in tickets/mttr.py, so this
+// adapter rejects it and the page shows an error (README "Known limitations"). Backend field names stay in this
+// block: change StatsApi and toDashboardStats() only.
 
 export interface StatsApi {
   total_results: number;
@@ -468,8 +475,13 @@ export const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 export function makeEndpoints(client: ApiClient) {
   const id = (value: string) => encodeURIComponent(value);
   return {
-    health: (signal?: AbortSignal) => client.request<unknown>("/health", { signal }).then(assertHealth),
-    ready: (signal?: AbortSignal) => client.request<unknown>("/health/ready", { signal }).then(assertHealth),
+    // Under /api: ad blockers often block URLs containing "/health". The backend serves both paths.
+    health: (signal?: AbortSignal) => client.request<unknown>("/api/health", { signal }).then(assertHealth),
+    ready: (signal?: AbortSignal) => client.request<unknown>("/api/health/ready", { signal }).then(assertHealth),
+    // The permanent database's audit hash chain (role lead).
+    verifyChain: (signal?: AbortSignal) =>
+      client.request<unknown>("/api/tickets/audit/verify", { signal }).then(assertDbChain),
+    // LEGACY local audit store (app/common/audit.py, /api/audit/*): still read by the Dashboard's Audit trail card.
     verifyAudit: (signal?: AbortSignal) =>
       client.request<unknown>("/api/audit/verify", { signal }).then(assertChain),
     results: (signal?: AbortSignal) =>

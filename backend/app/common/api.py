@@ -4,7 +4,9 @@
     error:   {"ok": false, "data": null, "error": {"code": "...", "message": "..."}}
 
 Raise ApiError(status, code, message) anywhere in a route; main.py turns it into the error envelope.
-Problem-specific routes go in their own module tomorrow and are added with app.include_router(...).
+Problem-specific routes live in their own module (app/api/tickets.py, app/auth/router.py) and are added with
+app.include_router(...). The audit endpoints here are the LEGACY local audit store (docs/ARCHITECTURE.md); the
+permanent database and its audit chain are in app/db/.
 """
 from __future__ import annotations
 

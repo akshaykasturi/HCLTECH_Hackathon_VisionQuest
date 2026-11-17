@@ -12,25 +12,27 @@ with the goal of measurably reducing MTTR. It analyses and recommends only: no a
 
 ## Requirements -> where each is met
 
-| Requirement | Where it is met (file, screen or test) | Status |
+| Requirement | Where it is met (file, screen or test) | Status (proof) |
 |---|---|---|
-| FR-01 category / subcategory / priority + confidence | `backend/app/tickets/classify.py`, Analyze page chips | todo |
-| FR-02 similar + duplicate tickets, ranked (title, description, service, metadata) | `backend/app/tickets/similar.py` (hybrid BM25 + embeddings + RRF, match labels, lookalike flag) | todo |
-| FR-03 resolution recommendation from resolved tickets or approved KB | `backend/app/tickets/generate.py` + `backend/app/tickets/kb.py` | todo |
-| FR-04 evidence: source, excerpt, reason it supports | `Step.source_id / excerpt / why`, verified in `backend/app/tickets/checks.py` | todo |
-| FR-05 low confidence, no unsupported conclusions, escalation path | `backend/app/tickets/gate.py` (RECOMMEND / CLARIFY / ESCALATE / BLOCKED) | todo |
-| FR-06 analyst feedback useful / incorrect / unresolved | `POST /api/tickets/results/{id}/feedback`, `backend/app/db/repo.py` | todo |
-| FR-07 search + filters (category, status, team, service, environment, date) | `GET /api/tickets`, Tickets page | todo |
-| FR-08 audit: input, classification, evidence, recommendation, reviewer decision | `backend/app/db/tables.py` (`analysis_results`, `feedback`, `audit_events` hash chain) | todo |
-| FR-09 MTTR with assistant vs manual baseline | `backend/app/tickets/mttr.py`, Dashboard (baseline measured, assisted estimated) | todo |
-| Mentor: login | `backend/app/auth/`, Login page | todo |
-| Mentor: feedback in a permanent DB | Neon Postgres via `DATABASE_URL` (`backend/app/db/`) | todo |
-| Mentor: screen + classify before masking | `backend/app/tickets/screen.py` + `classify.py` run first, raw text in memory only | todo |
-| Mentor: compare 3 chunking methods (fixed, heading, contextual) x 3 retrieval methods (BM25, dense, hybrid) | `backend/app/tickets/chunking.py` + `retrieval_eval()`, results table in `docs/EVALUATION.md` | todo |
-| Sensitive content respected in retrieval, display and export | `backend/app/tickets/guard.py` masks before search, storage, logs, LLM | todo |
-| Evaluation report | `backend/scripts/evaluate.py` -> `docs/EVALUATION.md` | todo |
-| At least 3 worked examples | `docs/WORKED-EXAMPLES.md` | todo |
-| README: setup, architecture, assumptions, trade-offs | `README.md` | todo |
+| FR-01 category / subcategory / priority + confidence | `backend/app/tickets/classify.py` + `classifier_choice.json` (9 candidates compared on val), Analyze page chips | done (PR #29, #32; `docs/ml/all-classifiers-val.md`) |
+| FR-02 similar + duplicate tickets, ranked (title, description, service, metadata) | `backend/app/tickets/similar.py` (hybrid BM25 + embeddings + RRF, match labels, lookalike flag) | done (PR #4, #16; retrieval rows in `docs/EVALUATION.md`) |
+| FR-03 resolution recommendation from resolved tickets or approved KB | `backend/app/tickets/generate.py` + `backend/app/tickets/kb.py`, template fallback in `pipeline.py` | done (PR #8, #9, #20; `docs/LLM_CHECK.md`) |
+| FR-04 evidence: source, excerpt, reason it supports | `Step.source_id / excerpt / why`, verified in `backend/app/tickets/checks.py` | done (PR #7, #11, #35) |
+| FR-05 low confidence, no unsupported conclusions, escalation path | `backend/app/tickets/gate.py` (RECOMMEND / CLARIFY / ESCALATE / BLOCKED) | done (PR #6, #18, #19); gate thresholds in `policy.yaml` are hand-set defaults, not tuned on val |
+| FR-06 analyst feedback useful / incorrect / unresolved | `POST /api/tickets/results/{id}/feedback`, `backend/app/db/repo.py` | done (PR #38; `tests/test_db_repo.py`) |
+| FR-07 search + filters (category, status, team, service, environment, date) | `GET /api/tickets`, Tickets page | done (PR #10, #26) |
+| FR-08 audit: input, classification, evidence, recommendation, reviewer decision | `backend/app/db/tables.py` (`analysis_results`, `feedback`, `audit_events` hash chain), `GET /api/tickets/audit/verify`, Audit History page | done (PR #38; Audit page on the database: docs/final-polish) |
+| FR-09 MTTR with assistant vs manual baseline | `backend/app/tickets/mttr.py` (baseline measured, assisted estimated), `docs/EVALUATION.md` | partial: numbers in `docs/EVALUATION.md` (PR #31); the Dashboard's stats panel is not wired to them yet (`GET /api/tickets/stats` lacks the `docs/DASHBOARD-CONTRACT.md` fields) |
+| Mentor: login | `backend/app/auth/`, Login page | done (PR #14, #21, #25) |
+| Mentor: feedback in a permanent DB | Neon Postgres via `DATABASE_URL` (`backend/app/db/`) | done (PR #38) |
+| Mentor: screen + classify before masking | `backend/app/tickets/screen.py` + `classify.py` run first, raw text in memory only | done (PR #5, #8, #32) |
+| Mentor: compare 3 chunking methods (fixed, heading, contextual) x 3 retrieval methods (BM25, dense, hybrid) | `backend/app/tickets/chunking.py`, `scripts/eval_chunking.py` -> `docs/results/chunking_val.json` / `chunking_test.json`; winner `kb_chunking: heading` | done (PR #20) |
+| Sensitive content respected in retrieval, display and export | `backend/app/tickets/guard.py` masks before search, storage, logs, LLM; leak probe in `docs/REDTEAM.md` | done (PR #5, #17) |
+| Raw-to-clean data ingestion | `backend/app/ingest/`, `docs/INGESTION.md` | done (PR #33) |
+| Evaluation report | `backend/scripts/evaluate.py` -> `docs/EVALUATION.md` | partial: val done (PR #34); the test split has not been scored for the pipeline or the classifiers (`--final` not run) |
+| At least 3 worked examples | `docs/WORKED-EXAMPLES.md` | done (PR #34) |
+| README: setup, architecture, assumptions, trade-offs | `README.md` | done (docs/final-polish) |
+| Employee complaint portal (submit, status, "My requests") | shapes in `backend/app/tickets/models.py`, design in `docs/ARCHITECTURE.md` | not built (shapes only: PR #22) |
 
 ## Flow
 
@@ -38,7 +40,7 @@ with the goal of measurably reducing MTTR. It analyses and recommends only: no a
 login (JWT) -> 1 screen + classify (raw text, in memory) -> 2 mask + redact -> 3 find evidence (similar tickets + KB)
 -> 4 gate -> 5 LLM writes cited steps (RECOMMEND only) -> 6 code checks -> save to Postgres -> analyst review
 -> feedback / resolve saved -> history + MTTR dashboard
-evaluation runs steps 1-6 over the validation and test splits
+evaluation runs steps 1-6 over the validation split (test: --final, not run yet)
 ```
 
 ## Shared data shapes

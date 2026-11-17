@@ -1,6 +1,6 @@
 """Code checks the LLM's output before anyone sees it.
 
-The checks work on plain building blocks, so they fit whatever report shape we pick tomorrow:
+The checks work on plain building blocks, so they fit any report shape (tickets/checks.py adapts them to Recommendation):
 
   Evidence      an item the report may cite: id, text (what the LLM sees and quotes), data (the numbers)
   Citation      evidence_id + a quote copied word for word from that item's text
@@ -187,7 +187,7 @@ def check_numbers(text: str, where: str, evidence: list[Evidence],
     """Every number, date and time in `text` must come from the evidence.
 
     cited_ids: only these items count (e.g. what an explanation cites); None means all evidence.
-    also_allowed: numbers that are names, not measurements, in tomorrow's data (e.g. HTTP status codes).
+    also_allowed: numbers that are names, not measurements (e.g. HTTP status codes).
     Numbers are compared after rounding to the digits shown: "161 ms" matches 160.73, "503" does not match 504.
     """
     allowed = {float(x) for x in get_check_settings()["numbers"]["always_allowed"]} | {float(x) for x in also_allowed}

@@ -1,6 +1,6 @@
 # How we work in this repo
 
-HCLTech hackathon, team VisionQuest. The problem and the plan live in docs/PLAN.md (filled in on the day).
+HCLTech hackathon, team VisionQuest. The problem (UC1, IT tickets) and the plan live in docs/PLAN.md.
 Read it first. What we built before the event is listed in docs/DAY-LOG.md.
 
 These are guidance, not locks: anyone may help on any part, and people may switch laptops.

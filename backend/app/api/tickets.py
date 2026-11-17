@@ -15,9 +15,9 @@ BAD_ID (field names and reasons only, the submitted values are never echoed). No
   GET  /audit/verify (role lead)                             -> db/repo.verify_chain(): {ok, first_broken_seq}
 
 Login: every route needs role analyst or higher (require_role("analyst")): an employee gets 403. /stats needs
-lead. Without auth.deps (not merged) every request runs as
-User("demo", "analyst") and a warning is logged once: the routes are open.
-The repository (db/repo.py) is optional too: until it exists those routes answer 503 DB_NOT_READY.
+lead. Fallbacks kept for local work: if app.auth.deps were missing, every request would run as
+User("demo", "analyst") with a warning (routes open); if db/repo.py were missing, the database routes would
+answer 503 DB_NOT_READY. Both exist on main.
 """
 from __future__ import annotations
 

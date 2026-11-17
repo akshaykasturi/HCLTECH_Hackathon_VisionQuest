@@ -1,5 +1,5 @@
 // Mirrors the backend contract: backend/app/main.py (health) and backend/app/common/api.py + audit.py (audit).
-// Field names are the backend's own; do not rename them. Problem-specific types go here tomorrow.
+// Field names are the backend's own; do not rename them.
 
 export interface Envelope<T> {
   ok: boolean;
@@ -7,15 +7,16 @@ export interface Envelope<T> {
   error: { code: string; message: string } | null;
 }
 
-/** GET /health data. */
+/** GET /api/health data (also served at /health). */
 export interface HealthData {
   api: string; // "up"
-  database: string; // "up" | "down"
+  database: string; // "up" | "down" (the permanent database: SELECT 1)
+  database_detail?: string; // e.g. "postgresql: SELECT 1 ok", or the error class when down
   warmup: string; // "warming" | "ready" | "failed"
   warmup_detail: string;
 }
 
-/** GET /api/audit/results item (newest first). */
+/** LEGACY local audit store: GET /api/audit/results item (newest first). */
 export interface ResultSummary {
   result_id: string;
   case_id: string;
@@ -55,6 +56,13 @@ export interface ChainStatus {
   head_hash: string;
   first_bad_seq: number | null;
   reason: string | null;
+}
+
+/** GET /api/tickets/audit/verify: the permanent database's audit hash chain (backend/app/db/repo.py verify_chain). */
+export interface DbChainStatus {
+  ok: boolean;
+  first_broken_seq: number | null;
+  n_events: number;
 }
 
 // ---------- Auth: backend/app/auth/router.py ----------
@@ -243,7 +251,7 @@ export interface TicketQuery {
 }
 
 // ---------- Review history: what the page works with ----------
-// Frontend shape only. The backend record (a PROVISIONAL shape: db/repo.py is not merged yet) and the adapter
+// Frontend shape only. The backend record (db/repo.history, see HistoryRecordApi) and the adapter
 // that converts it live in lib/api.ts (HistoryRecordApi, toHistoryEntry). Pages never see backend field names.
 
 /** One feedback entry. Feedback is append-only: a changed opinion is a new entry and the newest counts. */
@@ -296,7 +304,7 @@ export interface TicketFeedbackIn {
 }
 
 // ---------- Dashboard: what the page works with ----------
-// Frontend shape only. The backend stats record (PROVISIONAL: db/repo.stats() and tickets/mttr.py are not merged)
+// Frontend shape only. The backend stats record (PROPOSED: db/repo.stats() does not send these fields yet)
 // and its adapter live in lib/api.ts (StatsApi, toDashboardStats).
 
 export interface OutcomeShare {

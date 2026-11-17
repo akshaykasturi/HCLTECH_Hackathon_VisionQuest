@@ -1,6 +1,6 @@
 // Review History: saved analyses with their feedback and resolution (GET /api/tickets/history).
-// The database part (db/repo.py) is not merged yet: the route answers 503 DB_NOT_READY and the page says so.
-// The page uses HistoryEntry only; the provisional backend record and its adapter live in lib/api.ts.
+// db/repo.history() supplies it. If the database is unavailable (DB_NOT_READY / DATABASE_UNAVAILABLE) the page says so.
+// The page uses HistoryEntry only; the backend record and its adapter live in lib/api.ts.
 // Nothing here is sample data.
 import { useCallback, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";

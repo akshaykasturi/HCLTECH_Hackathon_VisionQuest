@@ -18,8 +18,8 @@ and Vercel gives the site URL Render's CORS needs.
    Check that it ends with **`sslmode=require`**; add it if it is missing.
 4. Keep it in your password manager for step 2.4. Don't paste it in chat.
 
-Note for `db/engine.py`: SQLAlchemy with psycopg 3 wants the scheme `postgresql+psycopg://`. Neon gives
-`postgresql://`, so the engine should rewrite the scheme (or paste the URL with `+psycopg` added).
+Paste the URL as Neon gives it: `db/engine.py` rewrites `postgres://` / `postgresql://` to
+`postgresql+psycopg://` (psycopg 3) itself. The tables and the `DEMO_USERS` are created at startup.
 
 ## 2. Render (backend)
 

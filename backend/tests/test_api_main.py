@@ -134,3 +134,42 @@ def test_audit_folder_is_created_on_startup(tmp_path) -> None:
     with make_client(tmp_path) as client:
         client.get("/health")
     assert (tmp_path / "audit" / "test.db").is_file()
+
+
+def test_health_checks_the_real_database_and_answers_under_api_too(tmp_path) -> None:
+    with make_client(tmp_path) as client:
+        plain = client.get("/health").json()["data"]
+        api = client.get("/api/health").json()["data"]
+        ready = client.get("/api/health/ready")
+    assert plain["database"] == api["database"] == "up"
+    assert plain["database_detail"] == "sqlite: SELECT 1 ok"    # conftest's SQLite file, not the audit store
+    assert ready.status_code == 200 and ready.json()["ok"] is True
+
+
+def test_database_down_is_reported_not_a_500(tmp_path, monkeypatch) -> None:
+    from app import main as main_mod
+
+    class OperationalError(Exception):
+        pass
+
+    def broken_ping():
+        raise OperationalError("could not connect to postgresql://user:secret@host/db")
+
+    monkeypatch.setattr(main_mod, "optional", lambda module, name: broken_ping if name == "ping" else None)
+    with make_client(tmp_path, warmups=[]) as client:
+        wait_for_warmup(client)
+        health = client.get("/api/health")
+        ready = client.get("/health/ready")
+    assert health.status_code == 200
+    assert health.json()["data"]["database"] == "down"
+    assert health.json()["data"]["database_detail"] == "OperationalError"
+    assert "secret" not in health.text
+    assert ready.status_code == 503 and ready.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+
+def test_without_app_db_health_falls_back_to_the_legacy_audit_store(tmp_path, monkeypatch) -> None:
+    from app import main as main_mod
+    monkeypatch.setattr(main_mod, "optional", lambda module, name: None)
+    with make_client(tmp_path) as client:
+        data = client.get("/health").json()["data"]
+    assert data["database"] == "up" and "legacy audit store" in data["database_detail"]

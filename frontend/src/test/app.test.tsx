@@ -11,6 +11,9 @@ describe("public site", () => {
     expect(within(screen.getByRole("navigation", { name: "Site navigation" })).getByRole("link", { name: "Home" })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "IT staff sign in" }).length).toBeGreaterThan(0);
     expect(screen.getByRole("contentinfo")).toHaveTextContent("synthetic");
+    // the analyst sign-in is a prominent button; the complaint form is honestly "coming soon"
+    expect(screen.getByRole("link", { name: "IT staff: sign in to analyse tickets" })).toHaveAttribute("href", "/login");
+    expect(screen.getByText(/complaint submission for employees is coming soon/)).toBeInTheDocument();
     // employees never see backend status or technical details
     expect(screen.queryByRole("link", { name: /Backend status/ })).not.toBeInTheDocument();
   });
@@ -89,7 +92,7 @@ describe("analyst console shell", () => {
   });
 
   it("says when the backend is still warming up", async () => {
-    mockBackend({ ...analystRoutes(), "GET /health": ok(HEALTH_WARMING) });
+    mockBackend({ ...analystRoutes(), "GET /api/health": ok(HEALTH_WARMING) });
     signIn();
     renderApp("/analyst/system-health");
     expect((await screen.findAllByText("Warming up")).length).toBeGreaterThan(0);
@@ -109,27 +112,27 @@ describe("system health", () => {
   });
 
   it("shows not ready while warming up", async () => {
-    mockBackend({ "GET /health": ok(HEALTH_WARMING), "GET /health/ready": fail(503, "WARMING_UP", "Not ready") });
+    mockBackend({ "GET /api/health": ok(HEALTH_WARMING), "GET /api/health/ready": fail(503, "WARMING_UP", "Not ready") });
     renderApp("/analyst/system-health");
     await waitFor(() => expect(within(screen.getByRole("article", { name: "Warm-up" })).getByText("Not ready")).toBeInTheDocument());
     await waitFor(() => expect(within(screen.getByRole("article", { name: "Readiness" })).getByText("Not ready")).toBeInTheDocument());
   });
 
   it("shows the database as unavailable", async () => {
-    mockBackend({ "GET /health": ok({ ...HEALTH_OK, database: "down" }), "GET /health/ready": fail(503, "DATABASE_UNAVAILABLE", "x") });
+    mockBackend({ "GET /api/health": ok({ ...HEALTH_OK, database: "down" }), "GET /api/health/ready": fail(503, "DATABASE_UNAVAILABLE", "x") });
     renderApp("/analyst/system-health");
     await waitFor(() => expect(within(screen.getByRole("article", { name: "Audit database" })).getByText("Unavailable")).toBeInTheDocument());
   });
 
   it("recovers on Refresh after the backend was unreachable", async () => {
     let down = true;
-    const backend = mockBackend({ "GET /health": () => (down ? "network" : ok(HEALTH_OK)) });
+    const backend = mockBackend({ "GET /api/health": () => (down ? "network" : ok(HEALTH_OK)) });
     const { user } = renderApp("/analyst/system-health");
     expect(await screen.findByText("Backend unreachable")).toBeInTheDocument();
     expect(within(screen.getByRole("article", { name: "Audit database" })).getByText("Unknown")).toBeInTheDocument();
     down = false;
     await user.click(screen.getAllByRole("button", { name: /Refresh/ })[0]);
     await waitFor(() => expect(within(screen.getByRole("article", { name: "API" })).getByText("Healthy")).toBeInTheDocument());
-    expect(backend.callsTo("GET", "/health").length).toBeGreaterThanOrEqual(2);
+    expect(backend.callsTo("GET", "/api/health").length).toBeGreaterThanOrEqual(2);
   });
 });

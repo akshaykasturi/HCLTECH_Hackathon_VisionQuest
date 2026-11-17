@@ -6,7 +6,7 @@ What existed before the event, and what we built during it. Judges may ask: this
 
 Our working habits and generic, reusable parts, carried over from our practice run (the "mock", a UC4 API
 failure diagnosis assistant in the `HCLTECH-Mock` repo). Everything problem-specific (UC4 field names, causes,
-routes, data, pages) was removed. Nothing here knows tomorrow's problem.
+routes, data, pages) was removed. Nothing here knew the event's problem in advance.
 
 | File | Where it came from |
 |---|---|
@@ -38,6 +38,47 @@ routes, data, pages) was removed. Nothing here knows tomorrow's problem.
 
 ## Built during the event
 
-| Time | Who | What |
-|---|---|---|
-| 12:30 | Akshay | Problem picked (UC1); docs/PLAN.md, docs/ARCHITECTURE.md, shared shapes backend/app/tickets/models.py, test fixture, empty tickets/, auth/, db/, api/ packages |
+One row per merged pull request, from `gh pr list --state merged` (merge time, India Standard Time, 17 Nov 2026).
+The problem (UC1) was picked at about 12:25 IST; PR #1 (03:04) was a fix to the prepared LLM gateway before that.
+Who = the pull request's author. Commits inside each PR: `git log`.
+
+| Time (IST) | PR | Who | What |
+|---|---|---|---|
+| 03:04 | #1 | Akshay | llm: send explicit User-Agent and show masked HTTP error bodies |
+| 12:27 | #2 | Akshay | docs: plan, architecture and shared ticket shapes |
+| 12:30 | #3 | Akshay | docs: add chunking trials to the plan |
+| 12:40 | #4 | Akshay | rag: hybrid similar-ticket search |
+| 12:50 | #5 | Atheesha | tickets: screen step and ticket masking (steps 1 and 2) |
+| 12:51 | #6 | Akshay | rag: code gate for recommend, clarify, escalate and blocked |
+| 12:57 | #7 | Atheesha | tickets: check the LLM recommendation before showing it (step 6) |
+| 12:59 | #8 | Akshay | rag: analyze pipeline end to end with fallbacks |
+| 13:05 | #10 | Akshay | api: ticket routes on top of the pipeline |
+| 13:06 | #9 | Atheesha | tickets: LLM writes cited fix steps (step 5) with versioned prompt |
+| 13:13 | #11 | Akshay | rag: run template steps through the checks too |
+| 13:17 | #12 | Akshay | deploy: Render blueprint, Vercel SPA rewrite and deploy guide |
+| 13:19 | #13 | Roshan | data: add reproducible raw and curated ITSM datasets |
+| 13:24 | #14 | Atheesha | auth: JWT login route, current_user dependency and demo user seeding |
+| 13:36 | #15 | Raswanth | ml: entropy weighted TOPSIS re-ranking of similar tickets, off by default |
+| 13:37 | #16 | Akshay | rag: fit search, gate, presets and template to the real data |
+| 13:38 | #17 | Atheesha | screen: red-team runner and report, wider attack and hazard patterns |
+| 13:48 | #18 | Akshay | rag: gate counts unique words and shows screen codes as escalation reasons |
+| 13:54 | #19 | Atheesha | screen: needs_human codes for privileged, legal and repeated-failure tickets |
+| 13:55 | #20 | Akshay | rag: KB search and chunking trials |
+| 13:57 | #21 | Roshan | frontend: analyst sign-in, Analyze page and employee site layout |
+| 14:00 | #22 | Akshay | core: shared shapes for employee complaints |
+| 14:00 | #23 | Raswanth | ml: embedding features for the ticket classifier |
+| 14:10 | #24 | Atheesha | llm: default Groq model openai/gpt-oss-120b, document Gemini 429 fallback |
+| 14:14 | #25 | Atheesha | auth: lock audit routes to analysts, add employee role to demo users |
+| 14:23 | #26 | Roshan | frontend: Incident Management tickets page and employee role handling |
+| 14:42 | #28 | Roshan | frontend: Review History page with provisional history adapter |
+| 14:43 | #27 | Atheesha | tickets: LLM check script on real tickets and fewer false unsafe-step flags |
+| 14:55 | #29 | Akhilesh | ml: TF-IDF classifier comparison for category and subcategory (FR-01) |
+| 15:10 | #30 | Roshan | frontend: dashboard incident analytics, MTTR sections and data contract |
+| 15:14 | #31 | Akhilesh | mttr: measured baseline with SLA breach and CI, assisted MTTR estimate |
+| 15:28 | #32 | Raswanth | ml: classify.py with the best of all 9 classifiers, joint decoding, priority rule |
+| 15:37 | #33 | Roshan | data: raw-to-clean ticket ingestion pipeline with ground-truth evaluation |
+| 15:49 | #34 | Akhilesh | eval: pipeline evaluation over labelled cases, report and worked examples |
+| 15:53 | #35 | Atheesha | tickets: land stranded screen and checks fixes |
+| 15:54 | #36 | Raswanth | ml: AHP prior weights for the TOPSIS re-ranker, evaluation arms ahp and ahp_entropy |
+| 16:02 | #37 | Raswanth | docs: AHP weight sensitivity, one-at-a-time and Monte Carlo |
+| 16:20 | #38 | Akshay | db: permanent database for results, feedback, resolutions, users |

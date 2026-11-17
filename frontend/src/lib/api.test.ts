@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  ApiError, assertAnalysis, assertHealth, assertHistory, assertLogin, assertResult, createApiClient, describeError,
+  ApiError, assertAnalysis, assertDbChain, assertHealth, assertHistory, assertLogin, assertResult, createApiClient, describeError,
   makeEndpoints, toDashboardStats, toHistoryEntry,
 } from "./api";
 import { HISTORY_OPEN, HISTORY_RESOLVED, STATS } from "../test/fixtures";
@@ -108,7 +108,19 @@ describe("API client", () => {
   it("health checks the shape it gets", async () => {
     const fetchImpl = fetchReturning(200, { ok: true, data: HEALTH_OK, error: null });
     await expect(makeEndpoints(createApiClient({ baseUrl: "", fetchImpl })).health()).resolves.toEqual(HEALTH_OK);
+    expect(fetchImpl.mock.calls[0][0]).toBe("/api/health");   // under /api: ad blockers block "/health"
     expect(() => assertHealth({ api: "up" })).toThrow(ApiError);
+  });
+
+  it("ready and the database chain check use the /api paths", async () => {
+    const fetchImpl = fetchReturning(200, { ok: true, data: HEALTH_OK, error: null });
+    await makeEndpoints(createApiClient({ baseUrl: "", fetchImpl })).ready();
+    expect(fetchImpl.mock.calls[0][0]).toBe("/api/health/ready");
+    const chainFetch = fetchReturning(200, { ok: true, data: { ok: true, first_broken_seq: null, n_events: 4 }, error: null });
+    await expect(makeEndpoints(createApiClient({ baseUrl: "", fetchImpl: chainFetch })).verifyChain())
+      .resolves.toEqual({ ok: true, first_broken_seq: null, n_events: 4 });
+    expect(chainFetch.mock.calls[0][0]).toBe("/api/tickets/audit/verify");
+    expect(() => assertDbChain({ valid: true })).toThrow(ApiError);
   });
 
   it("rejects a saved result without ids", () => {

@@ -12,7 +12,7 @@ Rule: keep what is useful, hide the secret.
 - passwords in free text -> the label stays, the value goes: "password: <PASSWORD>"  (IT tickets do this)
 - headers by name        -> Authorization, X-Api-Key, Idempotency-Key are masked whatever their value looks like
 
-Add a pattern to _KEY_PATTERNS when tomorrow's data has its own key format.
+Add a pattern to _KEY_PATTERNS when new data has its own key format.
 Standard library only. Nothing here prints or logs a secret.
 """
 from __future__ import annotations
