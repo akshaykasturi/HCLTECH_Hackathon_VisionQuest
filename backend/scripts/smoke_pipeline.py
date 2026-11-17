@@ -7,6 +7,7 @@ Prints one row per preset (app/tickets/presets.json): id, expected, got, reasons
 Exit code 1 only when a case that does NOT depend on data differs from what we expect: BLOCKED,
 SAFETY and TOO_VAGUE are decided by fixed words and rules. The other outcomes depend on the ticket data,
 the classifier and the KB, so a difference there is shown ("data") but does not fail the run.
+Presets copied from tickets.csv are searched with their own source_ticket_id excluded (leave-one-out).
 Prints no ticket text beyond the preset labels.
 """
 from __future__ import annotations
@@ -47,7 +48,9 @@ def main() -> int:
     print("-" * len(header))
     failures = 0
     for preset in presets:
-        result = analyze(TicketIn(**preset["ticket"]), user)
+        # Leave-one-out: a preset copied from tickets.csv is also in the index; it must not find itself.
+        own_id = preset.get("source_ticket_id")
+        result = analyze(TicketIn(**preset["ticket"]), user, exclude_ticket_ids=[own_id] if own_id else [])
         ok = matches(preset, result.outcome, result.reasons)
         strict = is_strict(preset)
         check = "ok" if ok else ("FAIL" if strict else "data")

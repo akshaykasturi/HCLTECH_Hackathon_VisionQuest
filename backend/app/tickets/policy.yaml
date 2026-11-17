@@ -19,12 +19,12 @@ gate:
   min_class_prob: 0.60      # classifier must be at least this sure to RECOMMEND
   safety_group: "Desktop Support L2 (safety)"
   default_group: "Service Desk L2"
-  escalation_groups:
-    Hardware: "Desktop Support"
-    Software: "Application Support"
-    Network: "Network Operations"
-    Access: "Identity & Access"
-    Email: "Messaging"
+  # Who takes an escalation: by default the team that handles most tickets of that category in the data
+  # (learned when the index is built). Add a category here only to override the data on purpose.
+  escalation_groups: {}
   vague_question: "Please describe what you were doing, the exact error message, and which application or device is affected."
-  clarify_questions:        # key: the two categories in alphabetical order, joined by "|"
-    "Access|Network": "Are you trying to sign in to your account or laptop, or to connect to the VPN or network?"
+  clarify_questions:        # key: the two categories (as in tickets.csv) in alphabetical order, joined by "|"
+    "Identity & Access|Network": "Are you trying to sign in to your account or laptop, or to connect to the VPN or network?"
+    "Endpoint|Network": "Is the problem with your laptop or device itself, or with the network or VPN connection?"
+    "Collaboration|Identity & Access": "Can you not sign in at all, or are you signed in but a meeting, chat or mail feature fails?"
+    "Cloud|Infrastructure": "Is this about a cloud service or account, or about our own servers and platforms?"

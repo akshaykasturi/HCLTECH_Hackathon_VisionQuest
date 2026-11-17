@@ -92,11 +92,13 @@ def test_filters_exclude_before_ranking(index):
 
 
 def test_service_boost_changes_order(index):
-    plain = search_similar(PARAPHRASE, k=8, index=index)
+    no_vpn = ["INC1", "INC7"]  # take the VPN tickets out, so second place has a different service
+    plain = search_similar(PARAPHRASE, k=8, index=index, exclude_ticket_ids=no_vpn)
     second = plain[1]
-    service = next(r["affected_service"] for r in ROWS if r["ticket_id"] == second.ticket_id)
-    assert service != "VPN"
-    boosted = search_similar(PARAPHRASE, k=8, affected_service=service, index=index)
+    service_of = {r["ticket_id"]: r["affected_service"] for r in ROWS}
+    service = service_of[second.ticket_id]
+    assert service != service_of[plain[0].ticket_id]
+    boosted = search_similar(PARAPHRASE, k=8, affected_service=service, index=index, exclude_ticket_ids=no_vpn)
     assert boosted[0].ticket_id == second.ticket_id
     assert f"same affected_service: {service}" in boosted[0].why
     assert boosted[0].score == second.score  # the bonus changes the order, not the shown similarity
@@ -129,10 +131,26 @@ def test_failing_embedder_falls_back_to_bm25():
     assert idx.mode == "bm25" and search_similar("VPN 809", index=idx)
 
 
-def test_test_split_is_never_indexed(index):
-    assert "INC7" not in {r["ticket_id"] for r in index.rows}
-    assert {r["split"] for r in index.rows} == {"train", "val"}
-    assert "INC7" not in ids(search_similar("VPN 809 error again", k=10, index=index))
+def test_every_split_is_history_and_splits_can_still_be_limited(index):
+    assert {r["split"] for r in index.rows} == {"train", "val", "test"}  # at run time all tickets are history
+    train_val = build_ticket_index(ROWS, splits=("train", "val"))
+    assert "INC7" not in {r["ticket_id"] for r in train_val.rows}
+
+
+def test_an_excluded_ticket_never_finds_itself(index):
+    own_text = "VPN 809 error again VPN gives error 809 again from home."  # INC7's own words
+    assert ids(search_similar(own_text, k=10, index=index))[0] == "INC7"  # without exclusion: itself, first
+    hits = search_similar(own_text, k=10, index=index, exclude_ticket_ids=["INC7"])
+    assert "INC7" not in ids(hits) and ids(hits)[0] == "INC1"  # leave-one-out: its real duplicate wins
+
+
+def test_majority_team_per_category_with_a_stable_tie_break():
+    rows = [{"category": "Network", "assigned_team": t} for t in ("Network Ops", "Network Ops", "Workplace IT")]
+    rows += [{"category": "Identity & Access", "assigned_team": t} for t in ("Service Desk", "IAM Engineering")]
+    assert similar.majority_teams(rows) == {"Network": "Network Ops", "Identity & Access": "IAM Engineering"}
+    assert similar.majority_teams(reversed(rows)) == similar.majority_teams(rows)  # row order does not matter
+    built = build_ticket_index(ROWS)
+    assert built.teams_by_category["Network"] == "Service Desk"  # every toy row uses Service Desk
 
 
 def test_empty_index_and_missing_csv_return_nothing(monkeypatch, tmp_path):
