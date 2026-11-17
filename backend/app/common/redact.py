@@ -8,6 +8,8 @@ Rule: keep what is useful, hide the secret.
 - emails                 -> "<EMAIL>"
 - IPv4 addresses         -> keep the /24, hide the host: 203.0.113.24 -> "203.0.113.x"
 - Idempotency-Key values -> "idem_<first 8 hex of sha256>": the same key always gives the same hash
+- phone numbers          -> "<PHONE>"  (10 to 15 digits; dates, IPs, ticket ids and error codes are kept)
+- passwords in free text -> the label stays, the value goes: "password: <PASSWORD>"  (IT tickets do this)
 - headers by name        -> Authorization, X-Api-Key, Idempotency-Key are masked whatever their value looks like
 
 Add a pattern to _KEY_PATTERNS when tomorrow's data has its own key format.
@@ -29,6 +31,8 @@ KEY_OTHER = "api_key_other"
 EMAIL = "email"
 IP = "ip"
 IDEM = "idempotency_key"
+PHONE = "phone"
+PASSWORD = "password"
 
 # A JWT is three base64url parts separated by dots; its header always starts with "eyJ".
 _JWT = r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]*)?"
@@ -48,6 +52,17 @@ _KEY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 # Four numbers 0-999 with dots, not part of a longer dotted number (like a version 1.2.3.4.5).
 _IP_RE = re.compile(r"(?<![\d.])(\d{1,3}\.\d{1,3}\.\d{1,3})\.(\d{1,3})(?!\.?\d)")
+# A phone number: an optional +, then digits with spaces, dashes or brackets between them. Checked by
+# _is_phone: 10-15 digits and not a date. Digits glued to letters (INC10432, KB5034441) never start one.
+_PHONE_RE = re.compile(r"(?<![\w.+])\+?\(?\d[\d\s()-]{8,}\d(?!\w|\.\d)")
+_DATE_START_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+# "password: X", "pwd=X", "password is X". Group 1: label and separator (kept), group 2: the value (masked).
+# With "is"/"was" the value must hold a digit or symbol, so "my password is expired" is kept.
+_PASSWORD_RE = re.compile(
+    r"\b((?:password|passwd|passcode|pwd|pin)\s*(?::|=)\s*)(?!<PASSWORD>)(\S+)"
+    r"|\b((?:password|passwd|passcode|pwd|pin)\s+(?:is|was)\s+)(?!<PASSWORD>)(\S*[\d!@#$%^&*_~?+=]\S*)",
+    re.IGNORECASE,
+)
 
 # Headers masked by their name, not by pattern (compared lower-case).
 _AUTH_HEADER = "authorization"
@@ -57,6 +72,21 @@ _IDEM_HEADER = "idempotency-key"
 
 def _is_ip(first_three: str, last: str) -> bool:
     return all(int(part) <= 255 for part in [*first_three.split("."), last])
+
+
+def _is_phone(candidate: str) -> bool:
+    digits = sum(c.isdigit() for c in candidate)
+    return 10 <= digits <= 15 and not _DATE_START_RE.match(candidate.lstrip("+("))
+
+
+def _mask_passwords(text: str, counts: Counter[str]) -> str:
+    def repl(m: re.Match[str]) -> str:
+        label = m.group(1) if m.group(1) is not None else m.group(3)
+        value = m.group(2) if m.group(2) is not None else m.group(4)
+        trail = value[len(value.rstrip(".,;)")):]  # keep the sentence's own punctuation
+        counts[PASSWORD] += 1
+        return f"{label}<PASSWORD>{trail}"
+    return _PASSWORD_RE.sub(repl, text)
 
 
 def mask_text(text: str) -> tuple[str, dict[str, int]]:
@@ -82,6 +112,8 @@ def mask_text(text: str) -> tuple[str, dict[str, int]]:
     text = sub(_EMAIL_RE, lambda m: EMAIL, lambda m: "<EMAIL>", text)
     text = sub(_IP_RE, lambda m: IP if _is_ip(m.group(1), m.group(2)) else None,
                lambda m: f"{m.group(1)}.x", text)
+    text = _mask_passwords(text, counts)
+    text = sub(_PHONE_RE, lambda m: PHONE if _is_phone(m.group(0)) else None, lambda m: "<PHONE>", text)
     return text, dict(counts)
 
 
@@ -164,4 +196,8 @@ def find_leaks(text: str) -> list[str]:
     kinds = {kind for kind, pattern in _LEAK_CHECKS if pattern.search(text)}
     if any(_is_ip(m.group(1), m.group(2)) for m in _IP_RE.finditer(text)):
         kinds.add(IP)
+    if any(_is_phone(m.group(0)) for m in _PHONE_RE.finditer(text)):
+        kinds.add(PHONE)
+    if _PASSWORD_RE.search(text):
+        kinds.add(PASSWORD)
     return sorted(kinds)
