@@ -16,7 +16,7 @@ Rules:
 - The LLM only writes words. Code decides, and code checks the output (report_checks.py) before anyone sees it.
 - Tests pass a fake `http` function: they never call real APIs.
 
-Model names: GEMINI_MODEL (default gemini-2.5-flash), GROQ_MODEL (default llama-3.3-70b-versatile).
+Model names: GEMINI_MODEL (default gemini-2.5-flash), GROQ_MODEL (default openai/gpt-oss-120b).
 Try your keys: `.\\.venv\\Scripts\\python.exe scripts\\check_llm.py`
 """
 from __future__ import annotations
@@ -131,7 +131,7 @@ def _call_gemini(key: str, system: str, user: str, http: HttpPost, timeout: floa
 
 
 def _call_groq(key: str, system: str, user: str, http: HttpPost, timeout: float) -> str:
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     body = {
         "model": model,
         "temperature": 0,
