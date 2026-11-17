@@ -5,6 +5,8 @@ import { afterEach, vi } from "vitest";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  sessionStorage.clear(); // every test starts signed out
+  localStorage.clear();
 });
 
 // Node 25+ defines its own global localStorage/sessionStorage (undefined without --localstorage-file), which

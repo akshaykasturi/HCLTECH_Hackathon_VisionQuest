@@ -5,7 +5,9 @@ import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { AppProviders, AppRoutes } from "../App";
 import type { Endpoints } from "../lib/api";
-import { HEALTH_OK } from "./fixtures";
+import { HEALTH_OK, LOGIN_OK, PRESETS, TAXONOMY } from "./fixtures";
+import { SESSION_KEY } from "../lib/session";
+import type { User } from "../lib/types";
 
 export type Reply = { status?: number; body?: unknown; raw?: string; delayMs?: number } | "network" | "hang";
 export type Handler = Reply | ((req: { method: string; path: string; body: unknown }) => Reply | Promise<Reply>);
@@ -20,6 +22,11 @@ export function defaultRoutes(): Record<string, Handler> {
     "GET /health/ready": ok(HEALTH_OK),
     "GET /api/audit/results": ok([]),
   };
+}
+
+/** Routes the Analyze page loads on open (demo tickets and service names). */
+export function analystRoutes(): Record<string, Handler> {
+  return { "GET /api/tickets/presets": ok(PRESETS), "GET /api/tickets/taxonomy": ok(TAXONOMY) };
 }
 
 /** Replace global fetch with a router over "METHOD /path" keys. Unknown routes answer 404 in the envelope. */
@@ -53,6 +60,11 @@ export function mockBackend(routes: Record<string, Handler> = {}) {
     fetchMock,
     callsTo: (method: string, path: string) => calls.filter((c) => c.method === method && c.path === path),
   };
+}
+
+/** Start the test signed in (what a successful POST /api/auth/login leaves in sessionStorage). */
+export function signIn(user: User = LOGIN_OK.user, token = LOGIN_OK.token) {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token, expiresAt: LOGIN_OK.expires_at, user }));
 }
 
 export function renderApp(path = "/", options: { endpoints?: Endpoints } = {}) {

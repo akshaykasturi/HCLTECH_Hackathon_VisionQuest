@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChevronRight, Menu, Radar, X } from "lucide-react";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { ChevronRight, LogOut, Menu, Radar, X } from "lucide-react";
 import { APP_NAME, breadcrumbs, NAV_ITEMS } from "../../lib/nav";
+import { useAuth } from "../../state/Auth";
 import { deriveHealth } from "../../lib/health";
 import { useHealth } from "../../state/AppData";
 import { HealthBadge } from "../common/status";
@@ -13,8 +14,8 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
         <li key={to}>
           <NavLink to={to} end={end} onClick={onNavigate}
                    className={({ isActive }) =>
-                     `group flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 ${
-                       isActive ? "border-indigo-400 bg-white/10 text-white" : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"}`}>
+                     `group flex items-center gap-3 rounded-lg border-l-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-300 ${
+                       isActive ? "border-blue-400 bg-white/10 text-white" : "border-transparent text-slate-300 hover:bg-white/5 hover:text-white"}`}>
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
             {label}
           </NavLink>
@@ -26,11 +27,11 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 
 function Brand() {
   return (
-    <Link to="/" className="flex items-center gap-2.5 rounded-lg px-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400">
+    <Link to="/analyst/analyze" className="flex items-center gap-2.5 rounded-lg px-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300">
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-white"><Radar className="h-4 w-4" aria-hidden /></span>
       <span className="leading-tight">
         <span className="block text-sm font-semibold text-white">{APP_NAME}</span>
-        <span className="block text-xs text-slate-400">HCLTech hackathon</span>
+        <span className="block text-xs text-slate-400">Analyst console</span>
       </span>
     </Link>
   );
@@ -43,12 +44,31 @@ function BackendStatus() {
   const health = deriveHealth(data, error);
   if (loading && !data) return <span className="text-xs text-muted">Checking backend…</span>;
   return (
-    <Link to="/system-health" className="flex items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+    <Link to="/analyst/system-health" className="flex items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
           aria-label={`Backend status: API ${health.api.replace("_", " ")}, warm-up ${health.warmup.replace("_", " ")}. Open System Health`}>
       <span className="hidden text-xs text-muted sm:inline">Backend</span>
       <HealthBadge state={health.api === "healthy" && health.warmup !== "healthy" ? health.warmup : health.api}
                    label={health.api === "healthy" ? WARMUP_LABEL[health.warmup] : undefined} />
     </Link>
+  );
+}
+
+function UserMenu() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  if (!user) return null;
+  return (
+    <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+      <span className="hidden text-right leading-tight sm:block">
+        <span className="block text-sm font-medium text-ink">{user.username}</span>
+        <span className="block text-xs capitalize text-muted">{user.role}</span>
+      </span>
+      <button type="button" onClick={() => { logout(); navigate("/login", { replace: true }); }}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-muted hover:bg-slate-100 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+        <LogOut className="h-4 w-4" aria-hidden />
+        Sign out
+      </button>
+    </div>
   );
 }
 
@@ -93,7 +113,7 @@ export function AppShell() {
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-sidebar px-3 py-5 md:flex" aria-label="Sidebar">
         <Brand />
         <nav aria-label="Main navigation" className="mt-8 flex-1"><NavList /></nav>
-        <p className="px-3 text-xs leading-relaxed text-slate-500">Code decides, the LLM explains, code checks. Only evidence or a reviewer confirms.</p>
+        <Link to="/" className="mx-3 rounded text-xs text-slate-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300">← Employee support site</Link>
       </aside>
 
       {drawerOpen && (
@@ -105,7 +125,7 @@ export function AppShell() {
             <div className="flex items-center justify-between pr-1">
               <Brand />
               <button type="button" onClick={() => { setDrawerOpen(false); menuButton.current?.focus(); }}
-                      className="rounded-lg p-2 text-slate-300 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-400"
+                      className="rounded-lg p-2 text-slate-300 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300"
                       aria-label="Close navigation">
                 <X className="h-5 w-5" aria-hidden />
               </button>
@@ -135,6 +155,7 @@ export function AppShell() {
             </ol>
           </nav>
           <BackendStatus />
+          <UserMenu />
         </header>
         <main id="main" ref={mainRef} tabIndex={-1} className="mx-auto max-w-7xl px-4 py-6 focus:outline-none md:px-6 md:py-8">
           <Outlet />

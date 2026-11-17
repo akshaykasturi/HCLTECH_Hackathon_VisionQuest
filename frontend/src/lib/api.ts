@@ -1,8 +1,11 @@
 // One HTTP client for the FastAPI backend. Every response is the {ok, data, error} envelope.
 // Errors are normalised into ApiError so screens can show one consistent message and retry.
 import type {
-  ChainStatus, Envelope, FeedbackRecord, FeedbackRequest, HealthData, ResultSummary, SavedResult,
+  AnalysisResult, ChainStatus, Envelope, FeedbackRecord, FeedbackRequest, HealthData, LoginData, Preset,
+  ResultSummary, SavedResult, Taxonomy, TicketFeedbackIn, TicketIn, User,
 } from "./types";
+import { OUTCOMES } from "./types";
+import { readSession, UNAUTHORIZED_EVENT } from "./session";
 
 export type ApiErrorKind = "http" | "network" | "timeout" | "aborted" | "invalid_response";
 
@@ -36,6 +39,14 @@ export interface ApiClientConfig {
   baseUrl?: string;
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
+  /** The login token to send as Authorization: Bearer (default: the stored session's token). */
+  getToken?: () => string | null;
+  /** Called when a request that carried a token gets 401 (default: fire UNAUTHORIZED_EVENT). */
+  onUnauthorized?: () => void;
+}
+
+function defaultUnauthorized() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
 }
 
 /** Base URL from VITE_API_BASE_URL; empty means same origin (the Vite dev proxy in development). */
@@ -56,6 +67,8 @@ export function createApiClient(config: ApiClientConfig = {}) {
   const baseUrl = (config.baseUrl ?? configuredBaseUrl()).replace(/\/+$/, "");
   const defaultTimeout = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const doFetch = (...args: Parameters<typeof fetch>) => (config.fetchImpl ?? globalThis.fetch)(...args);
+  const getToken = config.getToken ?? (() => readSession()?.token ?? null);
+  const onUnauthorized = config.onUnauthorized ?? defaultUnauthorized;
 
   async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
     const controller = new AbortController();
@@ -70,13 +83,16 @@ export function createApiClient(config: ApiClientConfig = {}) {
       else options.signal.addEventListener("abort", onOuterAbort, { once: true });
     }
 
+    const token = getToken();
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (options.body !== undefined) headers["Content-Type"] = "application/json";
+    if (token) headers.Authorization = `Bearer ${token}`;
+
     let response: Response;
     try {
       response = await doFetch(`${baseUrl}${path}`, {
         method: options.method ?? "GET",
-        headers: options.body !== undefined
-          ? { "Content-Type": "application/json", Accept: "application/json" }
-          : { Accept: "application/json" },
+        headers,
         body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
       });
@@ -90,6 +106,7 @@ export function createApiClient(config: ApiClientConfig = {}) {
     }
 
     const requestId = response.headers.get("X-Request-ID");
+    if (response.status === 401 && token) onUnauthorized();
     let body: unknown;
     try {
       body = await response.json();
@@ -157,7 +174,33 @@ export function assertChain(data: unknown): ChainStatus {
   return data as unknown as ChainStatus;
 }
 
-// ---------- endpoints (add tomorrow's problem routes here) ----------
+export function assertLogin(data: unknown): LoginData {
+  if (!isRecord(data) || typeof data.token !== "string" || !data.token || typeof data.expires_at !== "string"
+      || !isRecord(data.user) || typeof data.user.username !== "string"
+      || (data.user.role !== "analyst" && data.user.role !== "lead")) invalid("login response");
+  return data as unknown as LoginData;
+}
+
+export function assertAnalysis(data: unknown): AnalysisResult {
+  if (!isRecord(data) || typeof data.result_id !== "string" || !OUTCOMES.includes(data.outcome as never)
+      || !Array.isArray(data.similar) || !Array.isArray(data.kb) || !Array.isArray(data.reasons)
+      || typeof data.confidence !== "number") invalid("analysis result");
+  return data as unknown as AnalysisResult;
+}
+
+export function assertPresets(data: unknown): Preset[] {
+  if (!Array.isArray(data) || !data.every((p) => isRecord(p) && typeof p.id === "string" && isRecord(p.ticket))) {
+    invalid("preset list");
+  }
+  return data as Preset[];
+}
+
+export function assertTaxonomy(data: unknown): Taxonomy {
+  if (!isRecord(data) || !Array.isArray(data.affected_service) || !Array.isArray(data.category)) invalid("taxonomy");
+  return data as unknown as Taxonomy;
+}
+
+// ---------- endpoints ----------
 
 export const ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 
@@ -176,6 +219,22 @@ export function makeEndpoints(client: ApiClient) {
       client.request<unknown>(`/api/audit/results/${id(resultId)}/feedback`, { signal }).then(assertFeedbackList),
     addFeedback: (resultId: string, body: FeedbackRequest, signal?: AbortSignal) =>
       client.request<FeedbackRecord>(`/api/audit/results/${id(resultId)}/feedback`, { method: "POST", body, signal }),
+
+    // Auth (backend/app/auth/router.py)
+    login: (username: string, password: string, signal?: AbortSignal) =>
+      client.request<unknown>("/api/auth/login", { method: "POST", body: { username, password }, signal })
+        .then(assertLogin),
+    me: (signal?: AbortSignal) => client.request<User>("/api/auth/me", { signal }),
+
+    // Tickets (backend/app/api/tickets.py). The analysis runs the whole pipeline, so it gets a longer timeout.
+    analyze: (ticket: TicketIn, signal?: AbortSignal) =>
+      client.request<unknown>("/api/tickets/analyze", { method: "POST", body: ticket, signal, timeoutMs: 60_000 })
+        .then(assertAnalysis),
+    presets: (signal?: AbortSignal) => client.request<unknown>("/api/tickets/presets", { signal }).then(assertPresets),
+    taxonomy: (signal?: AbortSignal) =>
+      client.request<unknown>("/api/tickets/taxonomy", { signal }).then(assertTaxonomy),
+    ticketFeedback: (resultId: string, body: TicketFeedbackIn, signal?: AbortSignal) =>
+      client.request<unknown>(`/api/tickets/results/${id(resultId)}/feedback`, { method: "POST", body, signal }),
   };
 }
 
@@ -213,7 +272,26 @@ export function describeError(error: unknown): ErrorDescription {
     case "RESULT_NOT_FOUND":
       return { title: "Result not found", message: "No saved result has this ID.", retryable: false };
     case "DATABASE_UNAVAILABLE":
-      return { title: "Audit database unavailable", message: "The audit database is not available.", retryable: true };
+      return { title: "Database unavailable", message: "The database is not available right now.", retryable: true };
+    case "DB_NOT_READY":
+      return { title: "Saving not available yet",
+               message: "The results database is not connected yet, so this could not be saved.", retryable: false };
+    case "INVALID_LOGIN":
+      return { title: "Sign-in failed", message: "Wrong username or password.", retryable: false };
+    case "TOO_MANY_ATTEMPTS":
+      return { title: "Too many attempts", message: "Too many wrong tries. Wait a few minutes and try again.",
+               retryable: false };
+    case "AUTH_NOT_CONFIGURED":
+      return { title: "Sign-in unavailable", message: "Sign-in is not set up on the server yet.", retryable: false };
+    case "UNAUTHORIZED":
+      return { title: "Please sign in", message: "Your session has ended. Sign in again to continue.", retryable: false };
+    case "FORBIDDEN":
+      return { title: "Not allowed", message: "Your role cannot open this page.", retryable: false };
+    case "ANALYSIS_FAILED":
+      return { title: "Analysis failed", message: "The ticket could not be analysed. Try again.", retryable: true };
+  }
+  if (error.status === 400) {
+    return { title: "Check the form", message: error.message, retryable: false };
   }
   if (error.status === 422) {
     return { title: "Invalid request", message: error.message, retryable: false };

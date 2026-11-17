@@ -4,7 +4,7 @@ import { Card, EmptyState, PageHeader } from "../components/common/ui";
 
 export function NotFoundPage() {
   return (
-    <>
+    <div className="mx-auto max-w-3xl px-4 py-10 md:px-0">
       <PageHeader title="Page not found" />
       <Card as="div">
         <EmptyState title="This page does not exist" icon={<Compass className="h-5 w-5" />}
@@ -12,6 +12,6 @@ export function NotFoundPage() {
           Check the address, or use the navigation.
         </EmptyState>
       </Card>
-    </>
+    </div>
   );
 }
